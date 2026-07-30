@@ -31,6 +31,16 @@ static void apply_cases(void)
     }
     value=gd_apply_color("\xe5\x89\x91",'w',&err);
     expect_string("unicode alphabetic",value,"{^W}\xe5\x89\x91"); free(value);
+    value=gd_apply_color("[ms]a[fs]b[ns]c[mp]d[fp]e[ms]f[fs]g[ns]h[mp]i",'g',&err);
+    expect_string("many brackets",value,"[ms]{^G}a[fs]{^G}b[ns]{^G}c[mp]{^G}d[fp]{^G}e[ms]{^G}f[fs]{^G}g[ns]{^G}h[mp]{^G}i"); free(value);
+    value=gd_apply_color("|1a|2b|3c|4d|5e|6f|7g|8h|9i",'g',&err);
+    expect_string("many pipes",value,"|1{^G}a|2{^G}b|3{^G}c|4{^G}d|5{^G}e|6{^G}f|7{^G}g|8{^G}h|9{^G}i"); free(value);
+    value=gd_apply_color("[12]Sword",'g',&err);
+    expect_string("numeric brackets",value,"[12]Sword"); free(value);
+    value=gd_apply_color("[]Sword",'g',&err);
+    expect_string("empty brackets",value,"[]Sword"); free(value);
+    value=gd_apply_color("[ms]Big] Sword",'g',&err);
+    expect_string("stray close bracket",value,"[ms]{^G}Big] Sword"); free(value);
 }
 
 static void property_cases(void)
@@ -68,18 +78,22 @@ static void inference_cases(void)
     gd_inference inference;
     gd_error err;
     gd_tag *base;
-    gd_part *part;
+    gd_part *part, *part2;
     gd_inference_init(&inference);
     base=(gd_tag *)calloc(1,sizeof(*base));
     part=(gd_part *)calloc(1,sizeof(*part));
+    part2=(gd_part *)calloc(1,sizeof(*part2));
     base->name=gd_strdup("base",&err); base->kind=GD_ITEM; base->gear=1;
+    base->item_present=1;
     base->counts[GD_COMMON]=2; base->counts[GD_RARE]=2;
     part->name=gd_strdup("style",&err); part->base=gd_strdup("base",&err);
-    inference.tags=base; inference.parts=part;
+    part2->name=gd_strdup("cascade",&err); part2->base=gd_strdup("style",&err);
+    part->next=part2; inference.tags=base; inference.parts=part;
     gd_inference_finish(&inference,&err);
     if(base->rarity!=GD_COMMON || !base->affixable)++failures;
     if(gd_tag_color(&inference,"base")!='w')++failures;
     if(gd_tag_color(&inference,"style")!='w')++failures;
+    if(gd_tag_color(&inference,"cascade")!=0)++failures;
     gd_inference_free(&inference);
 }
 

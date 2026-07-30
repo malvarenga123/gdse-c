@@ -26,12 +26,14 @@ typedef struct gd_tag {
     unsigned long counts[5];
     int faction;
     int gear;
+    int item_present;
     struct gd_tag *next;
 } gd_tag;
 
 typedef struct gd_part {
     char *name;
     char *base;
+    int affixable;
     struct gd_part *next;
 } gd_part;
 
