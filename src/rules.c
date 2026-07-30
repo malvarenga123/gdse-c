@@ -5,7 +5,7 @@
 #include <string.h>
 
 /* Keep the project sources C89-clean while isolating utf8proc's public ABI. */
-typedef long gd_utf8proc_ssize;
+typedef ptrdiff_t gd_utf8proc_ssize;
 typedef int gd_utf8proc_int32;
 extern gd_utf8proc_ssize utf8proc_iterate(const unsigned char *,
                                           gd_utf8proc_ssize,

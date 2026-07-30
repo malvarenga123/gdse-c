@@ -6,6 +6,7 @@
 - Build: `make` (override `CC` and `CFLAGS` conventionally).
 - Test: `make test`; full compile-and-test check: `make check`.
 - Clean: `make clean`.
+- MinGW32 build/test: `mingw32-make` and `mingw32-make test` (produces `gdse.exe`). Cross-compile check: `make clean && make CC=i686-w64-mingw32-gcc EXE=.exe all`.
 - Run: `GRIM_DAWN_INSTALL_PATH=/path/to/game ./gdse [--language en] [--out PATH] [--rainbow-filter-damage-colors]`.
 - Project sources compile with `-std=c89 -pedantic -Wall -Wextra -Werror`. Vendored upstream sources compile with their supported dialect and are isolated behind project-owned interfaces.
 

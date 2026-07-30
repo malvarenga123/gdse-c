@@ -13,6 +13,17 @@ make test
 
 The application is written to ISO C89. LZ4 and utf8proc are vendored under `vendor/` so builds do not download dependencies. Their licenses are included beside their sources.
 
+### Windows / MinGW32
+
+From a MinGW shell or with `mingw32-make` available on `PATH`:
+
+```bat
+mingw32-make
+mingw32-make test
+```
+
+The build produces `gdse.exe`. Windows-specific filesystem and 64-bit seek calls are selected behind `_WIN32`; project code does not include POSIX headers on that path. The i686 MinGW-w64 cross compiler is also exercised with strict C89 diagnostics during development.
+
 ## Usage
 
 ```sh

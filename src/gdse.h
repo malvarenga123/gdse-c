@@ -60,6 +60,8 @@ char *gd_strdup(const char *text, gd_error *err);
 int gd_read_u16(FILE *file, gd_u16 *value, gd_error *err);
 int gd_read_u32(FILE *file, gd_u32 *value, gd_error *err);
 int gd_seek(FILE *file, gd_u32 offset, gd_error *err);
+int gd_skip(FILE *file, long offset, gd_error *err);
+int gd_tell(FILE *file, gd_u32 *offset, gd_error *err);
 int gd_path_exists(const char *path);
 int gd_is_directory(const char *path);
 int gd_mkdirs(const char *path, gd_error *err);

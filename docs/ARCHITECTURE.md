@@ -24,6 +24,7 @@ flowchart LR
 - `src/util.c` contains checked allocation, little-endian reads, directory creation, joins, and archive-path containment checks.
 - `src/gdse.h` is an internal interface; this executable exposes no supported library ABI.
 - `vendor/lz4` and `vendor/utf8proc` are isolated third-party implementations with included licenses.
+- Platform-dependent filesystem and large-file calls are isolated behind `_WIN32` adapters: MinGW uses `_stat`, `_mkdir`, `_rmdir`, `_fseeki64`, and `_ftelli64`; non-Windows builds use their C/POSIX counterparts. The Makefile selects Windows command syntax and `.exe` targets when `OS=Windows_NT`.
 
 ## Control and data flow
 

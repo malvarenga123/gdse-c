@@ -1,4 +1,6 @@
 build/
 gdse
+gdse.exe
 tests/test_rules
+tests/test_rules.exe
 out/

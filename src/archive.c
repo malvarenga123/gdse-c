@@ -99,16 +99,16 @@ gd_arz *gd_arz_open(const char *path, gd_error *err)
         gd_u32 record_index;
         for (record_index = 0; record_index < db->record_count; ++record_index) {
             gd_u32 kind_length;
-            long position = ftell(db->file);
-            if (position < 0 || (unsigned long)position > 0xffffffffUL ||
-                fseek(db->file, 4L, SEEK_CUR) != 0 ||
+            gd_u32 position;
+            if (!gd_tell(db->file, &position, err) ||
+                !gd_skip(db->file, 4L, err) ||
                 !gd_read_u32(db->file, &kind_length, err) || kind_length > 1024UL ||
-                fseek(db->file, (long)kind_length + 20L, SEEK_CUR) != 0) {
+                !gd_skip(db->file, (long)kind_length + 20L, err)) {
                 gd_set_error(err, "invalid ARZ record list in %s", path);
                 gd_arz_close(db);
                 return NULL;
             }
-            db->record_offsets[record_index] = (gd_u32)position;
+            db->record_offsets[record_index] = position;
         }
     }
     if (!gd_seek(db->file, strings_offset, err)) {
@@ -116,10 +116,16 @@ gd_arz *gd_arz_open(const char *path, gd_error *err)
         return NULL;
     }
     end = strings_offset + strings_len;
-    while ((gd_u32)ftell(db->file) < end) {
+    for (;;) {
         gd_u32 count;
         gd_u32 i;
+        gd_u32 position;
         char **grown;
+        if (!gd_tell(db->file, &position, err)) {
+            gd_arz_close(db);
+            return NULL;
+        }
+        if (position >= end) break;
         if (!gd_read_u32(db->file, &count, err) ||
             count > 10000000UL - db->string_count) {
             gd_set_error(err, "invalid ARZ string table in %s", path);
@@ -231,7 +237,7 @@ int gd_arz_record(gd_arz *db, gd_u32 index, gd_record *record, gd_error *err)
     if (!gd_read_u32(db->file, &string_index, err) ||
         !gd_read_u32(db->file, &kind_len, err)) return 0;
     if (string_index >= db->string_count || kind_len > 1024UL ||
-        fseek(db->file, (long)kind_len, SEEK_CUR) != 0 ||
+        !gd_skip(db->file, (long)kind_len, err) ||
         !gd_read_u32(db->file, &offset, err) ||
         !gd_read_u32(db->file, &compressed_len, err) ||
         !gd_read_u32(db->file, &uncompressed_len, err)) {
@@ -359,7 +365,7 @@ int gd_arc_record(gd_arc *arc, gd_u32 index, char **id, gd_u8 **data,
         !gd_read_u32(arc->file, &ignored, err) ||
         !gd_read_u32(arc->file, &ignored, err) ||
         !gd_read_u32(arc->file, &uncompressed_len, err) ||
-        fseek(arc->file, 12L, SEEK_CUR) != 0 ||
+        !gd_skip(arc->file, 12L, err) ||
         !gd_read_u32(arc->file, &block_count, err) ||
         !gd_read_u32(arc->file, &block_index, err)) return 0;
     *id = arc_name(arc, index, err);

@@ -9,9 +9,15 @@
 #if defined(_WIN32)
 #include <direct.h>
 #define GD_MKDIR(path) _mkdir(path)
+#define GD_STAT _stat
+#define GD_STAT_STRUCT struct _stat
+#define GD_ISDIR(mode) (((mode) & _S_IFMT) == _S_IFDIR)
 #else
 #include <unistd.h>
 #define GD_MKDIR(path) mkdir(path, 0777)
+#define GD_STAT stat
+#define GD_STAT_STRUCT struct stat
+#define GD_ISDIR(mode) S_ISDIR(mode)
 #endif
 
 void gd_set_error(gd_error *err, const char *fmt, ...)
@@ -63,24 +69,56 @@ int gd_read_u32(FILE *file, gd_u32 *value, gd_error *err)
 
 int gd_seek(FILE *file, gd_u32 offset, gd_error *err)
 {
+#if defined(_WIN32)
+    if (_fseeki64(file, (__int64)offset, SEEK_SET) != 0) {
+#else
     if (offset > 0x7fffffffUL || fseek(file, (long)offset, SEEK_SET) != 0) {
+#endif
         gd_set_error(err, "could not seek in input");
         return 0;
     }
     return 1;
 }
 
+int gd_skip(FILE *file, long offset, gd_error *err)
+{
+#if defined(_WIN32)
+    if (_fseeki64(file, (__int64)offset, SEEK_CUR) != 0) {
+#else
+    if (fseek(file, offset, SEEK_CUR) != 0) {
+#endif
+        gd_set_error(err, "could not seek in input");
+        return 0;
+    }
+    return 1;
+}
+
+int gd_tell(FILE *file, gd_u32 *offset, gd_error *err)
+{
+#if defined(_WIN32)
+    __int64 position = _ftelli64(file);
+#else
+    long position = ftell(file);
+#endif
+    if (position < 0 || position / 65536L > 65535L) {
+        gd_set_error(err, "input position is outside the supported range");
+        return 0;
+    }
+    *offset = (gd_u32)position;
+    return 1;
+}
+
 int gd_path_exists(const char *path)
 {
-    struct stat info;
-    return stat(path, &info) == 0;
+    GD_STAT_STRUCT info;
+    return GD_STAT(path, &info) == 0;
 }
 
 int gd_is_directory(const char *path)
 {
-    struct stat info;
-    if (stat(path, &info) != 0) return 0;
-    return S_ISDIR(info.st_mode);
+    GD_STAT_STRUCT info;
+    if (GD_STAT(path, &info) != 0) return 0;
+    return GD_ISDIR(info.st_mode);
 }
 
 int gd_mkdirs(const char *path, gd_error *err)

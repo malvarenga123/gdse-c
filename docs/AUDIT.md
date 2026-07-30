@@ -16,6 +16,7 @@
 | `./gdse --help` | Exit 0; documents the supported CLI surface. |
 | `./gdse --version` | Exit 0; reports `gdse 0.1.0-c89`. |
 | `GRIM_DAWN_INSTALL_PATH=/nonexistent ./gdse` | Nonzero as designed; invalid install paths are diagnosed. |
+| `make clean && make CC=i686-w64-mingw32-gcc EXE=.exe all` | Exit 0; produces a 32-bit Windows executable with strict C89 diagnostics on project sources. |
 
 ## AUD-001 — Core transformation and inference behavior has no automated tests
 
@@ -60,3 +61,4 @@
 - Exercise publication rollback with injected rename/write failures on Linux and Windows.
 - Validate non-English archives and invalid-byte behavior.
 - Confirm archive record identifiers' documented contract upstream; containment is enforced defensively regardless.
+- Run the cross-compiled binary and tests on native Windows or Wine; this checkout validates MinGW32 compilation but has no Windows runtime.
