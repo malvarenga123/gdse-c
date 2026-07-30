@@ -2,23 +2,24 @@
 
 ## Toolchain and commands
 
-- Rust 2024 edition; the audit baseline used `rustc 1.95.0` and `cargo 1.95.0`. No pinned toolchain file exists.
-- Build: `cargo build` or `cargo build --release`.
-- Run: `GRIM_DAWN_INSTALL_PATH=/path/to/game cargo run --release -- [--language en] [--out PATH] [--rainbow-filter-damage-colors]`.
-- Test: `cargo test --all-targets` (currently no tests).
-- Format: `cargo fmt --all` (check with `cargo fmt --all -- --check`).
-- Lint: `cargo clippy --all-targets --all-features -- -D warnings` (known baseline failures are recorded in `docs/AUDIT.md`).
-- There is no separate type-check, code-generation, packaging, or deployment command.
+- Application sources are ISO C89. A POSIX-like `make` and C compiler are required.
+- Build: `make` (override `CC` and `CFLAGS` conventionally).
+- Test: `make test`; full compile-and-test check: `make check`.
+- Clean: `make clean`.
+- Run: `GRIM_DAWN_INSTALL_PATH=/path/to/game ./gdse [--language en] [--out PATH] [--rainbow-filter-damage-colors]`.
+- Project sources compile with `-std=c89 -pedantic -Wall -Wextra -Werror`. Vendored upstream sources compile with their supported dialect and are isolated behind project-owned interfaces.
 
 ## Architecture and map
 
-`src/main.rs` parses the CLI, opens Grim Dawn databases through `src/db.rs`, and invokes `src/colorize.rs`. `src/infer.rs` derives item/affix metadata; `src/color.rs` maps that metadata to rarity colors; `src/property.rs` recognizes damage labels; and `src/palette.rs` owns color codes. See `docs/ARCHITECTURE.md` for flows and boundaries and `docs/AUDIT.md` for the remediation backlog.
+`src/main.c` owns CLI parsing, input policy, staging, manifests, and publication. `src/archive.c` streams Grim Dawn ARZ/ARC data. `src/rules.c` infers item metadata and applies rarity/property colors. `src/util.c` contains allocation, little-endian I/O, paths, and filesystem helpers. `src/gdse.h` is the internal interface. See `docs/ARCHITECTURE.md` and `docs/AUDIT.md`.
 
 ## Conventions and footguns
 
-- `GRIM_DAWN_INSTALL_PATH` must resolve to an installed Grim Dawn tree containing at least one `.arz` database. End-to-end operation additionally needs proprietary game archives unavailable in a normal checkout.
-- The default output is inside the game installation at `settings/text_<language>`; use `--out` while developing.
-- `Cargo.lock` pins the Git dependency `lib_gddb`; network access may be needed on a cold build.
-- `target/` is generated and ignored. No source files are documented as generated.
-- Preserve source localization lines and their CRLF/LF endings when changing rewriting logic.
-- Do not silently broaden the supported rarity or property rules: comments in `color.rs`, `infer.rs`, and `property.rs` document product decisions that require game-data/domain validation.
+- `GRIM_DAWN_INSTALL_PATH` must be an existing Grim Dawn tree. The base ARZ and requested base language ARC are mandatory; nonexistent DLC inputs are optional, but an existing unreadable/corrupt input is fatal.
+- Default output is `settings/text_<language>`; use `--out` while developing.
+- Preserve source localization content and CRLF/LF/no-final-newline behavior in rewriting code.
+- Output ownership is limited to paths in `.gdse-manifest`. Never broaden deletion beyond that manifest.
+- Archive record paths must pass `gd_safe_record_path` before filesystem use.
+- Do not broaden rarity/property rules without game-data/domain validation.
+- `vendor/lz4` and `vendor/utf8proc` are third-party source with adjacent licenses; avoid modifying them except for a deliberate vendor update.
+- Proprietary game archives are unavailable in a normal checkout, so real end-to-end validation remains manual.

@@ -1,2 +1,4 @@
-target/
+build/
+gdse
+tests/test_rules
 out/
