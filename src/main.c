@@ -45,10 +45,10 @@ static int has_output(output_file *files, const char *name)
 static int add_output(output_file **files, const char *name, gd_error *err)
 {
     output_file *file;
-    if (has_output(*files, name)) {
-        gd_set_error(err, "multiple archive records target %s", name);
-        return 0;
-    }
+    /* Archives are processed from base game through later expansions.  Keep a
+       single manifest entry while allowing the later record to replace the
+       staged file, matching the game's archive overlay semantics. */
+    if (has_output(*files, name)) return 1;
     file = (output_file *)gd_alloc(sizeof(*file), err);
     if (file == NULL) return 0;
     file->name = gd_strdup(name, err);
