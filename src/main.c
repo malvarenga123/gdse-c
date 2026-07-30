@@ -22,8 +22,9 @@ typedef struct output_file {
 
 static void usage(FILE *stream)
 {
-    fprintf(stream, "Usage: gdse [-l LANG|--language LANG] [-o PATH|--out PATH]\n");
-    fprintf(stream, "            [--rainbow-filter-damage-colors] [--version]\n");
+    fprintf(stream, "Usage: gdse GRIM_DAWN_INSTALL_PATH\n");
+    fprintf(stream, "            [-l LANG|--language LANG] [-o PATH|--out PATH]\n");
+    fprintf(stream, "            [--rainbow-filter-damage-colors]\n");
 }
 
 static int ends_with(const char *text, const char *suffix)
@@ -243,7 +244,7 @@ int main(int argc, char **argv)
 {
     static const char *dbs[] = {"database/database.arz", "gdx1/database/GDX1.arz",
         "gdx2/database/GDX2.arz", "gdx3/database/GDX3.arz"};
-    const char *language = "en", *out_arg = NULL, *install;
+    const char *language = "en", *out_arg = NULL, *install = NULL;
     char lang[64], arc_rel[256], *out = NULL, *stage = NULL;
     int rainbow = 0, i, ok = 0;
     gd_error err; gd_inference inference; output_file *outputs = NULL;
@@ -254,12 +255,13 @@ int main(int argc, char **argv)
         else if (strcmp(argv[i], "--rainbow-filter-damage-colors") == 0) rainbow=1;
         else if (strcmp(argv[i], "--version") == 0) { puts("gdse 0.1.0-c89"); return 0; }
         else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) { usage(stdout); return 0; }
+        else if (argv[i][0] != '-' && install == NULL) install=argv[i];
         else { usage(stderr); return 2; }
     }
+    if (install == NULL) { fprintf(stderr,"GRIM_DAWN_INSTALL_PATH argument is required\n"); usage(stderr); return 2; }
     if (strlen(language) >= sizeof(lang)) { fprintf(stderr,"language is too long\n"); return 2; }
     strcpy(lang, language); for (i=0; lang[i]; ++i) lang[i]=(char)tolower((unsigned char)lang[i]);
-    install = getenv("GRIM_DAWN_INSTALL_PATH");
-    if (install == NULL || !gd_is_directory(install)) { fprintf(stderr,"GRIM_DAWN_INSTALL_PATH must name an existing directory\n"); return 1; }
+    if (!gd_is_directory(install)) { fprintf(stderr,"GRIM_DAWN_INSTALL_PATH must name an existing directory: %s\n",install); return 1; }
     if (out_arg != NULL) out=gd_strdup(out_arg,&err);
     else { char settings[128]; sprintf(settings,"settings/text_%s",lang); out=gd_path_join(install,settings,&err); }
     if (out == NULL) goto done;

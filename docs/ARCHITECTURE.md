@@ -28,7 +28,7 @@ flowchart LR
 
 ## Control and data flow
 
-1. The CLI validates `GRIM_DAWN_INSTALL_PATH` and options.
+1. The CLI requires and validates the positional `GRIM_DAWN_INSTALL_PATH` argument, then parses the remaining options.
 2. The base database is mandatory. DLC databases are skipped only if absent; malformed or unreadable existing databases fail the run.
 3. ARZ record offsets and the string table are indexed once. Relevant item records are decompressed individually and folded into linked inference state, bounding transient payload memory to one record.
 4. The base requested-language ARC is mandatory. DLC archives follow the same absent-versus-broken policy.

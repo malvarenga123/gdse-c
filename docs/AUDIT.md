@@ -15,7 +15,8 @@
 | `make clean && make check` | Exit 0; all project sources compile with strict C89 diagnostics and all focused tests pass. |
 | `./gdse --help` | Exit 0; documents the supported CLI surface. |
 | `./gdse --version` | Exit 0; reports `gdse 0.1.0-c89`. |
-| `GRIM_DAWN_INSTALL_PATH=/nonexistent ./gdse` | Nonzero as designed; invalid install paths are diagnosed. |
+| `./gdse` | Exit 2 as designed; the mandatory install-path argument is diagnosed. |
+| `./gdse /nonexistent` | Exit 1 as designed; invalid install paths are diagnosed. |
 | `make clean && make CC=i686-w64-mingw32-gcc EXE=.exe all` | Exit 0; produces a 32-bit Windows executable with strict C89 diagnostics on project sources. |
 
 ## AUD-001 — Core transformation and inference behavior has no automated tests

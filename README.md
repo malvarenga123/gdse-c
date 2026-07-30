@@ -27,11 +27,11 @@ The build produces `gdse.exe`. Windows-specific filesystem and 64-bit seek calls
 ## Usage
 
 ```sh
-GRIM_DAWN_INSTALL_PATH=/path/to/Grim\ Dawn ./gdse \
+./gdse /path/to/Grim\ Dawn \
   [--language en] [--out PATH] [--rainbow-filter-damage-colors]
 ```
 
-The base database and requested base language archive are required. DLC files are optional when absent, but gdse fails rather than silently ignoring an existing unreadable or corrupt file. The default destination is `$GRIM_DAWN_INSTALL_PATH/settings/text_<language>`.
+`GRIM_DAWN_INSTALL_PATH` is the mandatory first positional argument and must name the game installation. The base database and requested base language archive are required. DLC files are optional when absent, but gdse fails rather than silently ignoring an existing unreadable or corrupt file. The default destination is `GRIM_DAWN_INSTALL_PATH/settings/text_<language>`.
 
 gdse stages all generated files before publication, rejects unsafe/colliding archive paths, and records owned output in `.gdse-manifest`. Later runs remove only stale files named by that manifest, leaving unrelated files alone. Existing generated files are backed up during publication and restored if publication fails.
 
