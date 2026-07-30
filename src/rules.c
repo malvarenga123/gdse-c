@@ -107,8 +107,6 @@ int gd_infer_database(gd_inference *inference, gd_arz *db, gd_error *err)
             if (tag_name == NULL || *tag_name == '\0') { gd_record_free(&record); continue; }
             tag = ensure_tag(inference, tag_name, err);
             if (tag == NULL) { gd_record_free(&record); return 0; }
-            tag->kind = GD_ITEM;
-            tag->item_present = 1;
             class_name = gd_record_field(&record, "Class");
             if (class_name != NULL && (starts(class_name, "Weapon") ||
                                        starts(class_name, "Armor"))) tag->gear = 1;
@@ -119,6 +117,8 @@ int gd_infer_database(gd_inference *inference, gd_arz *db, gd_error *err)
             rarity_text = gd_record_field(&record, "itemClassification");
             rank = rarity(rarity_text);
             if (rank != GD_UNKNOWN) {
+                tag->kind = GD_ITEM;
+                tag->item_present = 1;
                 if (starts(record.id, "records/items/faction/")) tag->faction = 1;
                 ++tag->counts[(int)rank];
             }
