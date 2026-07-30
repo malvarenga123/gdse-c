@@ -49,12 +49,12 @@
 
 ## AUD-004 — Record filtering eagerly collects every raw database record
 
-- **Status:** Resolved; performance impact unmeasured
+- **Status:** Resolved; real-data performance remains unmeasured
 - **Classification:** Inferred
 - **Original severity:** Medium
-- **Resolution:** The C reader stores only fixed-size record offsets and the format-required string table. Item payloads are decompressed, folded into inference state, and freed one at a time. ARC payloads are likewise processed one at a time. The former simultaneous raw-record and resolved-record vectors no longer exist.
-- **Evidence:** `src/archive.c::gd_arz_open`, `gd_arz_record`; `src/rules.c::gd_infer_database`.
-- **Remaining limitation:** Representative peak-RSS and wall-time measurements cannot be collected without licensed databases. Inference state naturally still scales with unique relevant tags and relationships.
+- **Resolution:** The C reader stores only fixed-size record offsets and the format-required string table. Item payloads are decompressed, folded into inference state, and freed one at a time. ARC payloads are likewise processed one at a time. The former simultaneous raw-record and resolved-record vectors no longer exist. Dynamically resized hash indexes now make tag insertion, inference joins, and localization lookup amortized constant-time, and identical part/base relationships are stored once rather than once per record.
+- **Evidence:** `src/archive.c::gd_arz_open`, `gd_arz_record`; `src/rules.c::gd_infer_database`, `gd_inference_ensure_tag`, `gd_inference_add_part`, `gd_tag_color`; `tests/test_rules.c::index_cases`; `make clean && make check` exits 0 with 20,000 distinct synthetic tags, 20,000 lookups, and 20,000 duplicate relationships.
+- **Remaining limitation:** Representative peak-RSS and wall-time measurements cannot be collected without licensed databases. Inference state naturally still scales with unique relevant tags and unique relationships, and real game archives remain a manual performance-validation requirement.
 
 ## Residual risks and follow-up
 
