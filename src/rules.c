@@ -95,8 +95,10 @@ int gd_infer_database(gd_inference *inference, gd_arz *db, gd_error *err)
             if (tag_name != NULL && *tag_name != '\0' && rank != GD_UNKNOWN) {
                 tag = ensure_tag(inference, tag_name, err);
                 if (tag == NULL) { gd_record_free(&record); return 0; }
-                tag->kind = GD_AFFIX;
-                tag->rarity = rank;
+                if (!tag->item_present) {
+                    tag->kind = GD_AFFIX;
+                    tag->rarity = rank;
+                }
             }
         } else {
             const char *class_name;
@@ -105,18 +107,20 @@ int gd_infer_database(gd_inference *inference, gd_arz *db, gd_error *err)
             if (tag_name == NULL || *tag_name == '\0') { gd_record_free(&record); continue; }
             tag = ensure_tag(inference, tag_name, err);
             if (tag == NULL) { gd_record_free(&record); return 0; }
-            tag->kind = GD_ITEM;
             class_name = gd_record_field(&record, "Class");
             if (class_name != NULL && (starts(class_name, "Weapon") ||
                                        starts(class_name, "Armor"))) tag->gear = 1;
-            if (starts(record.id, "records/items/faction/")) tag->faction = 1;
-            rarity_text = gd_record_field(&record, "itemClassification");
-            rank = rarity(rarity_text);
-            if (rank != GD_UNKNOWN) ++tag->counts[(int)rank];
             part = gd_record_field(&record, "itemStyleTag");
             if (!add_part(inference, part, tag_name, err)) { gd_record_free(&record); return 0; }
             part = gd_record_field(&record, "itemQualityTag");
             if (!add_part(inference, part, tag_name, err)) { gd_record_free(&record); return 0; }
+            rarity_text = gd_record_field(&record, "itemClassification");
+            rank = rarity(rarity_text);
+            if (rank == GD_UNKNOWN) { gd_record_free(&record); continue; }
+            tag->kind = GD_ITEM;
+            tag->item_present = 1;
+            if (starts(record.id, "records/items/faction/")) tag->faction = 1;
+            ++tag->counts[(int)rank];
         }
         gd_record_free(&record);
     }
@@ -131,7 +135,7 @@ void gd_inference_finish(gd_inference *inference, gd_error *err)
     for (tag = inference->tags; tag != NULL; tag = tag->next) {
         int i, best = -1;
         unsigned long count = 0;
-        if (tag->kind != GD_ITEM) continue;
+        if (!tag->item_present) continue;
         for (i = 0; i < 5; ++i) {
             if (tag->counts[i] > count) { count = tag->counts[i]; best = i; }
         }
@@ -140,10 +144,14 @@ void gd_inference_finish(gd_inference *inference, gd_error *err)
     }
     for (part = inference->parts; part != NULL; part = part->next) {
         gd_tag *base = find_tag(inference, part->base);
-        if (base != NULL && base->affixable) {
+        part->affixable = base != NULL && base->affixable;
+    }
+    for (part = inference->parts; part != NULL; part = part->next) {
+        if (part->affixable) {
             gd_tag *word = ensure_tag(inference, part->name, err);
             if (word == NULL) return;
-            word->kind = GD_ITEM; word->rarity = GD_COMMON; word->affixable = 1;
+            word->kind = GD_ITEM; word->rarity = GD_COMMON;
+            word->affixable = 1; word->item_present = 1;
         }
     }
 }
@@ -201,6 +209,11 @@ static int color_at(const char *s)
            s[3] == '}';
 }
 
+static int ascii_alpha(char c)
+{
+    return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+}
+
 static int has_letter(const char *s)
 {
     gd_utf8proc_int32 codepoint;
@@ -247,7 +260,7 @@ char *gd_apply_color(const char *value, char color, gd_error *err)
     char cc[5] = {'{','^',0,'}','\0'};
     const char *p;
     char *out;
-    size_t len = strlen(value), pos = 0, cap = len + 32;
+    size_t len = strlen(value), pos = 0, markers = 0, cap;
     cc[2] = (char)toupper((unsigned char)color);
     p = strstr(value, "{^E}");
     if (p == NULL) p = strstr(value, "{^S}");
@@ -258,11 +271,36 @@ char *gd_apply_color(const char *value, char color, gd_error *err)
         strcpy(out + (p-value) + 4, p + 4); strcat(out, suffix); return out;
     }
     for (p = value; *p != '\0'; ++p) if (color_at(p)) return replace_all(value, "", cc, 1, err);
+    if (value[0] == '[' || (value[0] == '$' && value[1] == '[')) {
+        int in_bracket = 0, alphabetic = 0;
+        for (p = value; *p != '\0'; ++p) {
+            if (*p == '[') { in_bracket = 1; alphabetic = 0; }
+            else if (in_bracket && *p == ']') {
+                if (alphabetic) ++markers;
+                in_bracket = 0;
+            } else if (in_bracket && !ascii_alpha(*p)) in_bracket = 0;
+            else if (in_bracket) alphabetic = 1;
+        }
+    } else if (value[0] == '|') {
+        for (p = value; *p != '\0'; ++p)
+            if (*p == '|' && isdigit((unsigned char)p[1])) { ++markers; ++p; }
+    }
+    if (len > (size_t)-1 - 5 ||
+        markers > (((size_t)-1) - len - 5) / 4) {
+        gd_set_error(err, "colored value is too large"); return NULL;
+    }
+    cap = len + markers * 4 + 5;
     out = (char *)gd_alloc(cap, err); if (out == NULL) return NULL;
     if (value[0] == '[' || (value[0] == '$' && value[1] == '[')) {
+        int in_bracket = 0, alphabetic = 0;
         for (p = value; *p != '\0'; ++p) {
             out[pos++] = *p;
-            if (*p == ']') { memcpy(out + pos, cc, 4); pos += 4; }
+            if (*p == '[') { in_bracket = 1; alphabetic = 0; }
+            else if (in_bracket && *p == ']') {
+                if (alphabetic) { memcpy(out + pos, cc, 4); pos += 4; }
+                in_bracket = 0;
+            } else if (in_bracket && !ascii_alpha(*p)) in_bracket = 0;
+            else if (in_bracket) alphabetic = 1;
         }
     } else if (value[0] == '$') {
         out[pos++] = '$'; memcpy(out + pos, cc, 4); pos += 4; strcpy(out + pos, value + 1); return out;
@@ -305,6 +343,9 @@ char *gd_recolor_text(const char *text, size_t length,
             memcpy(value, text+eq+1, body_end-eq-1); value[body_end-eq-1] = '\0';
             color = gd_tag_color(inference, tag); if (!color) color = gd_property_color(tag, rainbow);
             if (color) changed = gd_apply_color(value, color, err);
+            if (color && changed == NULL) {
+                free(tag); free(value); free(out); return NULL;
+            }
             if (changed != NULL && strstr(tag, "Conversion") != NULL) {
                 size_t n = strlen(changed); char *grown = (char *)realloc(changed, n+5);
                 if (grown == NULL) { free(tag); free(value); free(changed); free(out); gd_set_error(err,"out of memory"); return NULL; }

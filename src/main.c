@@ -45,10 +45,7 @@ static int has_output(output_file *files, const char *name)
 static int add_output(output_file **files, const char *name, gd_error *err)
 {
     output_file *file;
-    if (has_output(*files, name)) {
-        gd_set_error(err, "multiple archive records target %s", name);
-        return 0;
-    }
+    if (has_output(*files, name)) return 1;
     file = (output_file *)gd_alloc(sizeof(*file), err);
     if (file == NULL) return 0;
     file->name = gd_strdup(name, err);
