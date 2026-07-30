@@ -78,17 +78,13 @@ static void inference_cases(void)
     gd_inference inference;
     gd_error err;
     gd_tag *base;
-    gd_part *part, *part2;
     gd_inference_init(&inference);
-    base=(gd_tag *)calloc(1,sizeof(*base));
-    part=(gd_part *)calloc(1,sizeof(*part));
-    part2=(gd_part *)calloc(1,sizeof(*part2));
-    base->name=gd_strdup("base",&err); base->kind=GD_ITEM; base->gear=1;
+    base=gd_inference_ensure_tag(&inference,"base",&err);
+    base->kind=GD_ITEM; base->gear=1;
     base->item_present=1;
     base->counts[GD_COMMON]=2; base->counts[GD_RARE]=2;
-    part->name=gd_strdup("style",&err); part->base=gd_strdup("base",&err);
-    part2->name=gd_strdup("cascade",&err); part2->base=gd_strdup("style",&err);
-    part->next=part2; inference.tags=base; inference.parts=part;
+    if(!gd_inference_add_part(&inference,"style","base",&err))++failures;
+    if(!gd_inference_add_part(&inference,"cascade","style",&err))++failures;
     gd_inference_finish(&inference,&err);
     if(base->rarity!=GD_COMMON || !base->affixable)++failures;
     if(gd_tag_color(&inference,"base")!='w')++failures;
@@ -97,9 +93,40 @@ static void inference_cases(void)
     gd_inference_free(&inference);
 }
 
+static void index_cases(void)
+{
+    gd_inference inference;
+    gd_error err;
+    gd_tag *tag;
+    char name[32];
+    int i;
+    gd_inference_init(&inference);
+    for(i=0;i<20000;++i) {
+        sprintf(name,"synthetic-tag-%d",i);
+        tag=gd_inference_ensure_tag(&inference,name,&err);
+        if(tag==NULL){++failures;break;}
+        tag->kind=GD_AFFIX; tag->rarity=GD_RARE;
+    }
+    if(inference.tag_count!=20000 || inference.tag_bucket_count<20000)
+        ++failures;
+    for(i=0;i<20000;++i) {
+        sprintf(name,"synthetic-tag-%d",i);
+        if(gd_tag_color(&inference,name)!='g')++failures;
+    }
+    for(i=0;i<20000;++i)
+        if(!gd_inference_add_part(&inference,"shared-part","shared-base",&err))
+            ++failures;
+    if(inference.part_count!=1)++failures;
+    if(!gd_inference_add_part(&inference,"shared-part","other-base",&err))
+        ++failures;
+    if(inference.part_count!=2)++failures;
+    gd_inference_free(&inference);
+}
+
 int main(void)
 {
     apply_cases(); property_cases(); rewrite_cases(); inference_cases();
+    index_cases();
     if(failures){fprintf(stderr,"%d tests failed\n",failures);return 1;}
     puts("all tests passed"); return 0;
 }

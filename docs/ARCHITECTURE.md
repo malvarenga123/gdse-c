@@ -20,7 +20,7 @@ flowchart LR
 
 - `src/main.c` is the composition root. It parses options, enforces mandatory/optional input policy, stages a complete output set, detects collisions, writes the ownership manifest, and publishes with backup/rollback.
 - `src/archive.c` implements the required version-3 `.arz` and `.arc` readers. It validates sizes and indexes, uses vendored LZ4 for payloads, and resolves one record at a time rather than collecting raw/resolved record vectors.
-- `src/rules.c` accumulates inference state, resolves modal rarity ties toward the lower tier, maps property tags, preserves Unicode alphabetic handling through utf8proc, and rewrites localization lines.
+- `src/rules.c` accumulates inference state in dynamically resized hash indexes, deduplicates identical part/base relationships, resolves modal rarity ties toward the lower tier, maps property tags, preserves Unicode alphabetic handling through utf8proc, and rewrites localization lines.
 - `src/util.c` contains checked allocation, little-endian reads, directory creation, joins, and archive-path containment checks.
 - `src/gdse.h` is an internal interface; this executable exposes no supported library ABI.
 - `vendor/lz4` and `vendor/utf8proc` are isolated third-party implementations with included licenses.
@@ -30,7 +30,7 @@ flowchart LR
 
 1. The CLI requires and validates the positional `GRIM_DAWN_INSTALL_PATH` argument, then parses the remaining options.
 2. The base database is mandatory. DLC databases are skipped only if absent; malformed or unreadable existing databases fail the run.
-3. ARZ record offsets and the string table are indexed once. Relevant item records are decompressed individually and folded into linked inference state, bounding transient payload memory to one record.
+3. ARZ record offsets and the string table are indexed once. Relevant item records are decompressed individually and folded into hash-indexed inference state, bounding transient payload memory to one record while keeping tag insertion and lookup amortized constant-time.
 4. The base requested-language ARC is mandatory. DLC archives follow the same absent-versus-broken policy.
 5. Relevant tag files are decoded as byte-preserving UTF-8 text and rewritten. CRLF, LF, and missing final newline are preserved. Invalid UTF-8 bytes are retained; utf8proc is used only to decide whether a plain value contains a Unicode letter.
 6. Every output is first written beneath a sibling staging path. Absolute, parent-traversing, or empty path components are rejected before publication; when archives contain the same destination, the later archive replaces the earlier staged output.

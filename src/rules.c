@@ -30,19 +30,75 @@ static gd_rarity rarity(const char *text)
     return GD_UNKNOWN;
 }
 
-static gd_tag *find_tag(gd_inference *inference, const char *name)
+static unsigned long hash_text(const char *text)
+{
+    unsigned long hash = 2166136261UL;
+    while (*text != '\0') {
+        hash ^= (unsigned char)*text++;
+        hash *= 16777619UL;
+    }
+    return hash;
+}
+
+static unsigned long hash_part(const char *name, const char *base)
+{
+    unsigned long hash = hash_text(name);
+    while (*base != '\0') {
+        hash ^= (unsigned char)*base++;
+        hash *= 16777619UL;
+    }
+    return hash;
+}
+
+static gd_tag *find_tag(const gd_inference *inference, const char *name)
 {
     gd_tag *tag;
-    for (tag = inference->tags; tag != NULL; tag = tag->next)
+    size_t bucket;
+    if (inference->tag_bucket_count == 0) return NULL;
+    bucket = (size_t)(hash_text(name) % inference->tag_bucket_count);
+    for (tag = inference->tag_buckets[bucket]; tag != NULL;
+         tag = tag->hash_next)
         if (strcmp(tag->name, name) == 0) return tag;
     return NULL;
 }
 
-static gd_tag *ensure_tag(gd_inference *inference, const char *name,
-                          gd_error *err)
+static int resize_tags(gd_inference *inference, size_t count, gd_error *err)
+{
+    gd_tag **buckets;
+    gd_tag *tag;
+    size_t i;
+    if (count > ((size_t)-1) / sizeof(*buckets)) {
+        gd_set_error(err, "tag index is too large");
+        return 0;
+    }
+    buckets = (gd_tag **)gd_alloc(count * sizeof(*buckets), err);
+    if (buckets == NULL) return 0;
+    memset(buckets, 0, count * sizeof(*buckets));
+    for (tag = inference->tags; tag != NULL; tag = tag->next) {
+        i = (size_t)(hash_text(tag->name) % count);
+        tag->hash_next = buckets[i];
+        buckets[i] = tag;
+    }
+    free(inference->tag_buckets);
+    inference->tag_buckets = buckets;
+    inference->tag_bucket_count = count;
+    return 1;
+}
+
+gd_tag *gd_inference_ensure_tag(gd_inference *inference, const char *name,
+                                gd_error *err)
 {
     gd_tag *tag = find_tag(inference, name);
+    size_t bucket;
     if (tag != NULL) return tag;
+    if (inference->tag_bucket_count == 0) {
+        if (!resize_tags(inference, 16, err)) return NULL;
+    } else if (inference->tag_count >=
+               inference->tag_bucket_count - inference->tag_bucket_count / 4) {
+        if (inference->tag_bucket_count > ((size_t)-1) / 2 ||
+            !resize_tags(inference, inference->tag_bucket_count * 2, err))
+            return NULL;
+    }
     tag = (gd_tag *)gd_alloc(sizeof(*tag), err);
     if (tag == NULL) return NULL;
     memset(tag, 0, sizeof(*tag));
@@ -51,6 +107,10 @@ static gd_tag *ensure_tag(gd_inference *inference, const char *name,
     tag->rarity = GD_UNKNOWN;
     tag->next = inference->tags;
     inference->tags = tag;
+    bucket = (size_t)(hash_text(name) % inference->tag_bucket_count);
+    tag->hash_next = inference->tag_buckets[bucket];
+    inference->tag_buckets[bucket] = tag;
+    ++inference->tag_count;
     return tag;
 }
 
@@ -58,13 +118,58 @@ void gd_inference_init(gd_inference *inference)
 {
     inference->tags = NULL;
     inference->parts = NULL;
+    inference->tag_buckets = NULL;
+    inference->part_buckets = NULL;
+    inference->tag_bucket_count = 0;
+    inference->part_bucket_count = 0;
+    inference->tag_count = 0;
+    inference->part_count = 0;
 }
 
-static int add_part(gd_inference *inference, const char *part,
-                    const char *base, gd_error *err)
+static int resize_parts(gd_inference *inference, size_t count, gd_error *err)
+{
+    gd_part **buckets;
+    gd_part *part;
+    size_t i;
+    if (count > ((size_t)-1) / sizeof(*buckets)) {
+        gd_set_error(err, "part index is too large");
+        return 0;
+    }
+    buckets = (gd_part **)gd_alloc(count * sizeof(*buckets), err);
+    if (buckets == NULL) return 0;
+    memset(buckets, 0, count * sizeof(*buckets));
+    for (part = inference->parts; part != NULL; part = part->next) {
+        i = (size_t)(hash_part(part->name, part->base) % count);
+        part->hash_next = buckets[i];
+        buckets[i] = part;
+    }
+    free(inference->part_buckets);
+    inference->part_buckets = buckets;
+    inference->part_bucket_count = count;
+    return 1;
+}
+
+int gd_inference_add_part(gd_inference *inference, const char *part,
+                          const char *base, gd_error *err)
 {
     gd_part *item;
+    size_t bucket;
     if (part == NULL || *part == '\0') return 1;
+    if (inference->part_bucket_count == 0) {
+        if (!resize_parts(inference, 16, err)) return 0;
+    }
+    bucket = (size_t)(hash_part(part, base) % inference->part_bucket_count);
+    for (item = inference->part_buckets[bucket]; item != NULL;
+         item = item->hash_next)
+        if (strcmp(item->name, part) == 0 && strcmp(item->base, base) == 0)
+            return 1;
+    if (inference->part_count >=
+        inference->part_bucket_count - inference->part_bucket_count / 4) {
+        if (inference->part_bucket_count > ((size_t)-1) / 2 ||
+            !resize_parts(inference, inference->part_bucket_count * 2, err))
+            return 0;
+        bucket = (size_t)(hash_part(part, base) % inference->part_bucket_count);
+    }
     item = (gd_part *)gd_alloc(sizeof(*item), err);
     if (item == NULL) return 0;
     item->name = gd_strdup(part, err);
@@ -74,6 +179,9 @@ static int add_part(gd_inference *inference, const char *part,
     }
     item->next = inference->parts;
     inference->parts = item;
+    item->hash_next = inference->part_buckets[bucket];
+    inference->part_buckets[bucket] = item;
+    ++inference->part_count;
     return 1;
 }
 
@@ -93,7 +201,7 @@ int gd_infer_database(gd_inference *inference, gd_arz *db, gd_error *err)
             tag_name = gd_record_field(&record, "lootRandomizerName");
             rank = rarity(gd_record_field(&record, "itemClassification"));
             if (tag_name != NULL && *tag_name != '\0' && rank != GD_UNKNOWN) {
-                tag = ensure_tag(inference, tag_name, err);
+                tag = gd_inference_ensure_tag(inference, tag_name, err);
                 if (tag == NULL) { gd_record_free(&record); return 0; }
                 if (!tag->item_present) {
                     tag->kind = GD_AFFIX;
@@ -105,15 +213,15 @@ int gd_infer_database(gd_inference *inference, gd_arz *db, gd_error *err)
             const char *part;
             tag_name = gd_record_field(&record, "itemNameTag");
             if (tag_name == NULL || *tag_name == '\0') { gd_record_free(&record); continue; }
-            tag = ensure_tag(inference, tag_name, err);
+            tag = gd_inference_ensure_tag(inference, tag_name, err);
             if (tag == NULL) { gd_record_free(&record); return 0; }
             class_name = gd_record_field(&record, "Class");
             if (class_name != NULL && (starts(class_name, "Weapon") ||
                                        starts(class_name, "Armor"))) tag->gear = 1;
             part = gd_record_field(&record, "itemStyleTag");
-            if (!add_part(inference, part, tag_name, err)) { gd_record_free(&record); return 0; }
+            if (!gd_inference_add_part(inference, part, tag_name, err)) { gd_record_free(&record); return 0; }
             part = gd_record_field(&record, "itemQualityTag");
-            if (!add_part(inference, part, tag_name, err)) { gd_record_free(&record); return 0; }
+            if (!gd_inference_add_part(inference, part, tag_name, err)) { gd_record_free(&record); return 0; }
             rarity_text = gd_record_field(&record, "itemClassification");
             rank = rarity(rarity_text);
             if (rank != GD_UNKNOWN) {
@@ -149,7 +257,7 @@ void gd_inference_finish(gd_inference *inference, gd_error *err)
     }
     for (part = inference->parts; part != NULL; part = part->next) {
         if (part->affixable) {
-            gd_tag *word = ensure_tag(inference, part->name, err);
+            gd_tag *word = gd_inference_ensure_tag(inference, part->name, err);
             if (word == NULL) return;
             word->kind = GD_ITEM; word->rarity = GD_COMMON;
             word->affixable = 1; word->item_present = 1;
@@ -163,14 +271,15 @@ void gd_inference_free(gd_inference *inference)
     gd_part *part = inference->parts;
     while (tag != NULL) { gd_tag *next = tag->next; free(tag->name); free(tag); tag = next; }
     while (part != NULL) { gd_part *next = part->next; free(part->name); free(part->base); free(part); part = next; }
+    free(inference->tag_buckets);
+    free(inference->part_buckets);
     gd_inference_init(inference);
 }
 
 char gd_tag_color(const gd_inference *inference, const char *name)
 {
-    const gd_tag *tag;
-    for (tag = inference->tags; tag != NULL; tag = tag->next) {
-        if (strcmp(tag->name, name) != 0) continue;
+    const gd_tag *tag = find_tag(inference, name);
+    if (tag != NULL) {
         if (tag->kind == GD_ITEM && !tag->affixable) return 0;
         if (tag->rarity == GD_COMMON) return 'w';
         if (tag->rarity == GD_MAGICAL) return 'y';

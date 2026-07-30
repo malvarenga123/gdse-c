@@ -28,6 +28,7 @@ typedef struct gd_tag {
     int gear;
     int item_present;
     struct gd_tag *next;
+    struct gd_tag *hash_next;
 } gd_tag;
 
 typedef struct gd_part {
@@ -35,11 +36,18 @@ typedef struct gd_part {
     char *base;
     int affixable;
     struct gd_part *next;
+    struct gd_part *hash_next;
 } gd_part;
 
 typedef struct gd_inference {
     gd_tag *tags;
     gd_part *parts;
+    gd_tag **tag_buckets;
+    gd_part **part_buckets;
+    size_t tag_bucket_count;
+    size_t part_bucket_count;
+    size_t tag_count;
+    size_t part_count;
 } gd_inference;
 
 typedef struct gd_field {
@@ -84,6 +92,10 @@ int gd_arc_record(gd_arc *arc, gd_u32 index, char **id, gd_u8 **data,
                   size_t *length, gd_error *err);
 
 void gd_inference_init(gd_inference *inference);
+gd_tag *gd_inference_ensure_tag(gd_inference *inference, const char *name,
+                                gd_error *err);
+int gd_inference_add_part(gd_inference *inference, const char *part,
+                          const char *base, gd_error *err);
 int gd_infer_database(gd_inference *inference, gd_arz *db, gd_error *err);
 void gd_inference_finish(gd_inference *inference, gd_error *err);
 void gd_inference_free(gd_inference *inference);
