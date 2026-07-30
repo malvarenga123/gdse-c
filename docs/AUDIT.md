@@ -43,7 +43,7 @@
 - **Status:** Resolved with platform limitation
 - **Classification:** Observed
 - **Original severity:** Medium
-- **Resolution:** Generation writes a complete sibling staging tree before publication. Unsafe record paths and duplicate destinations fail validation. `.gdse-manifest` records ownership and stale cleanup deletes only previously owned paths. Publication backs up existing destinations, uses renames, and restores backups after an observed publication failure.
+- **Resolution:** Generation writes a complete sibling staging tree before publication. Unsafe record paths fail validation, while duplicate destinations follow archive overlay order and replace the earlier staged file. `.gdse-manifest` records ownership and stale cleanup deletes only previously owned paths. Publication backs up existing destinations, uses renames, and restores backups after an observed publication failure.
 - **Evidence:** `src/main.c::process_archive`, `publish`; `src/util.c::gd_safe_record_path`.
 - **Remaining limitation:** Portable C89 cannot guarantee a transactional multi-file directory swap while coexisting with unrelated files. Individual renames and rollback are best-effort across crashes and filesystem/platform semantics. Crash-injection and Windows tests remain required before claiming stronger atomicity.
 
