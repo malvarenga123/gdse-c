@@ -12,13 +12,13 @@ flowchart LR
   ARC[src/archive.c / ARC] --> REWRITE[src/rules.c / rewriting]
   COLORS --> REWRITE
   REWRITE --> STAGE[sibling staging tree]
-  STAGE --> VALIDATE[path and collision validation]
+  STAGE --> VALIDATE[path validation and archive overlay]
   VALIDATE --> OUT[manifest-owned output]
 ```
 
 ## Components and dependencies
 
-- `src/main.c` is the composition root. It parses options, enforces mandatory/optional input policy, stages a complete output set, detects collisions, writes the ownership manifest, and publishes with backup/rollback.
+- `src/main.c` is the composition root. It parses options, enforces mandatory/optional input policy, stages a complete output set, lets a later archive replace an earlier staged destination, writes the ownership manifest, and publishes with backup/rollback.
 - `src/archive.c` implements the required version-3 `.arz` and `.arc` readers. It validates sizes and indexes, uses vendored LZ4 for payloads, and resolves one record at a time rather than collecting raw/resolved record vectors.
 - `src/rules.c` accumulates inference state in dynamically resized hash indexes, deduplicates identical part/base relationships, resolves modal rarity ties toward the lower tier, maps property tags, preserves Unicode alphabetic handling through utf8proc, and rewrites localization lines.
 - `src/util.c` contains checked allocation, little-endian reads, directory creation, joins, and archive-path containment checks.

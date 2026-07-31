@@ -40,7 +40,7 @@ The build produces `gdse.exe`. Windows-specific filesystem and 64-bit seek calls
 
 Run gdse from the Grim Dawn installation directory, or pass `GRIM_DAWN_INSTALL_PATH` as the optional first positional argument. When omitted, the path defaults to the current directory; gdse reports a missing required database when that directory is not a Grim Dawn installation. English (`en`) is the default language. The base database and requested base language archive are required. DLC files are optional when absent, but gdse fails rather than silently ignoring an existing unreadable or corrupt file. The default destination is `GRIM_DAWN_INSTALL_PATH/settings/text_<language>`.
 
-gdse stages all generated files before publication, rejects unsafe/colliding archive paths, and records owned output in `.gdse-manifest`. Later runs remove only stale files named by that manifest, leaving unrelated files alone. Existing generated files are backed up during publication and restored if publication fails.
+gdse stages all generated files before publication, rejects unsafe archive paths, and records owned output in `.gdse-manifest`. When more than one archive supplies the same destination, the later archive replaces the earlier staged file, following the game's archive overlay order. Later runs remove only stale files named by that manifest, leaving unrelated files alone. Existing generated files are backed up during publication and restored if publication fails.
 
 Re-run gdse after game patches. It has only been verified against the repository's synthetic tests; a licensed Grim Dawn installation is needed for an end-to-end smoke test. The output is not compatible with other mods that rewrite the same game text.
 
