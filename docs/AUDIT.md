@@ -6,7 +6,8 @@
 - **C89 remediation:** branch `c89`, based on `0e8706c0bb453767c585fe9f9596f4836f839ee4`.
 - **Upstream reference:** `origin` is configured, and the pre-fork Rust implementation remains available on the `mainline` branch. Comparing C behavior against that reference is the expected way to validate port parity.
 - **Scope:** The Rust/Cargo implementation was replaced by an ISO C89 application, focused tests, Make build, vendored LZ4/utf8proc, and updated durable guidance.
-- **Unvalidated:** Proprietary Grim Dawn data, real end-to-end output, Windows, non-English archives, crash injection, and representative performance measurements.
+- **Validated since:** English end-to-end output on a licensed installation of game version 1.3.0 — see *Full Rainbow parity* below. The ARZ and ARC readers, the inference pass, and the rewriter all ran against real version-3 archives to produce it.
+- **Unvalidated:** Windows runtime, non-English archives, crash injection during publication, representative performance measurements, and a byte-for-byte comparison against the pre-fork Rust executable.
 
 ## Remediation validation
 
@@ -57,9 +58,47 @@
 - **Evidence:** `src/archive.c::gd_arz_open`, `gd_arz_record`; `src/rules.c::gd_infer_database`, `gd_inference_ensure_tag`, `gd_inference_add_part`, `gd_tag_color`; `tests/test_rules.c::index_cases`; `make clean && make check` exits 0 with 20,000 distinct synthetic tags, 20,000 lookups, and 20,000 duplicate relationships.
 - **Remaining limitation:** Representative peak-RSS and wall-time measurements cannot be collected without licensed databases. Inference state naturally still scales with unique relevant tags and unique relationships, and real game archives remain a manual performance-validation requirement.
 
+## Full Rainbow parity (2026-07-31)
+
+`--full-rainbow` was developed against a diff of gdse's generated `tags_items.txt` and the `tags_items.txt` distributed with the Full Rainbow mod, taken on a licensed installation of game version 1.3.0. This section records what that comparison established so the analysis does not have to be repeated.
+
+### Measurement
+
+| Build | Differing lines |
+| --- | --- |
+| gdse's own scheme | 1,224 |
+| `--full-rainbow` | 273 |
+
+No line differs in text. Every difference in either run is a color marker or Full Rainbow's `(S) ` set marker; no tag is added, dropped, reworded, or reordered. All 209 set names Full Rainbow marks are reproduced exactly.
+
+### Classification of the remaining 273 lines
+
+| Cause | Lines | Actionable |
+| --- | --- | --- |
+| Monster Infrequent coloring | 148 | Only with a new inference pass over creature loot tables |
+| Tags absent from Full Rainbow's list | 103 | No — gdse colors ordinary gear it has no entry for |
+| Tags with no item record at all | 15 | No |
+| Enemy-only gear | 5 | No |
+| `Empowered` / `Mythical` unique styles | 2 | No |
+
+### Findings
+
+- **Monster Infrequents are not distinguishable from `records/items/` fields.** Full Rainbow paints them `{^L}`, and `{^Z}`/`{^F}` at Epic/Legendary tier. The distinction tracks whether a named creature drops the item, which lives in creature and loot-table records outside the `records/items/` scope gdse reads. Base rarity does not separate them: `Bloodsworn Repeater` is `{^L}` while `Hand Mortar`, `Shrapnel Pistol` and `Francis' Gun` are `{^G}`, and gdse classifies all four identically as Rare bases.
+
+- **Tags with no item record at all account for 15 lines.** Confirmed absent from the database: `tagHeadA010`, `tagShieldA011`, `tagQualityWeaponWood06` through `11`, `tagQuestItemSlithRing`, `tagShoulderF005`, `tagShoulderF010`, `tagTorsoF005`, `tagTorsoF010`. `tagQuestItemBrothersAmulet` and `tagItemTest` are presumed the same but were not separately confirmed. Full Rainbow colors text the game never displays; inference has nothing to work from. `tagQualityWeaponWood05`, which does have six records, is colored correctly, so the mechanism is sound.
+
+- **Enemy-only gear accounts for 5 lines** — `tagWeaponArcaneA001/A003/A005/A007` and `tagTorsoM001`. These name records under `records/items/enemygear/` and equivalent monster-gear paths, carrying meshes such as `creatures/enemies/groble/equipment/groble_shamanstaff01.msh`. `m01_groblestaff001.dbr` is classified `Broken`; `m01_torso001.dbr` has no `itemClassification` field at all and sets `cannotPickUp,1`. Either way the tag has no modeled rarity and stays uncolored.
+
+- **Modeling the `Broken` tier would be a net loss.** Full Rainbow colors `tagWeaponArcaneA001/3/5/7` but leaves `A002/4/6` plain, and all seven are the same kind of enemygear record, so treating `Broken` as colorable would fix four lines and break three in that family alone, before counting the rest of the game. These are items the player cannot obtain, so the names never reach an inventory tooltip. Note that the pre-fork Rust's claim in `src/keywords.rs` — that "only 2 tags in the game have a Broken record and neither is ever colored" — is not accurate; there are more, and Full Rainbow colors several. The behavior of ignoring `Broken` is still correct, but for the reason given here rather than the one stated there.
+
+- **The `Empowered` / `Mythical` unique styles cannot be separated from `Polarized`.** An implementation coloring a style word by the tier of the bases it reaches was built and measured. It colored `tagStyleUniqueTier2` `{^A}` and `tagStyleUniqueTier3` `{^P}` correctly, but also colored `tagStyleUniqueInverted` (`Polarized`), which Full Rainbow leaves plain. `Polarized` is a unique style on non-faction gear reaching Legendary bases — identical to `Mythical` in every field gdse reads. Two correct lines were not worth one visibly wrong one, so the category was dropped.
+
+- **A tag's records can disagree with each other.** One `itemNameTag` is shared by an item and its upgrade tiers, and those tiers are separate records that can differ. `tagLegsC005` ("Soiled Trousers") has four: a level-18 Epic base, a level-75 Empowered tier, an upgraded tier, and a level-94 awakened tier added in GDX3 — and only the awakened one carries an `itemSetName`. Any per-tag property derived from records must therefore be resolved across all of them rather than latched from the first hit; set membership uses a strict majority for this reason. Expansion databases matter here: a base-game-only search for `tagLegsC005` misses the record that mattered.
+
 ## Residual risks and follow-up
 
-- Confirm the C readers against real version-3 game data and compare generated output byte-for-byte with the former Rust executable.
+- Compare generated output byte-for-byte with the pre-fork Rust executable. The C readers have now been exercised against real version-3 game data (see *Full Rainbow parity*), but the two implementations have never been diffed against each other on the same installation.
+- Decide whether Monster Infrequent coloring is worth an inference pass over creature and loot-table records; it is the only remaining Full Rainbow category that is derivable at all, and the largest single block of remaining differences.
 - Exercise publication rollback with injected rename/write failures on Linux and Windows.
 - Validate non-English archives and invalid-byte behavior.
 - Confirm archive record identifiers' documented contract upstream; containment is enforced defensively regardless.
