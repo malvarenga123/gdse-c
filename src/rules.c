@@ -217,9 +217,14 @@ int gd_infer_database(gd_inference *inference, gd_arz *db, gd_error *err)
             tag = gd_inference_ensure_tag(inference, tag_name, err);
             if (tag == NULL) { gd_record_free(&record); return 0; }
             /* A non-empty itemSetName points at the set record this base
-               belongs to; Full Rainbow marks those names with "(S) ". */
+               belongs to; Full Rainbow marks those names with "(S) ". One tag
+               is often shared by a base item and its Empowered/Mythical
+               upgrades, and those tiers do not all belong to the same set, so
+               tally the records and resolve by majority in the same way rarity
+               does rather than latching on the first set-bearing record. */
+            ++tag->name_records;
             set_name = gd_record_field(&record, "itemSetName");
-            if (set_name != NULL && *set_name != '\0') tag->set_item = 1;
+            if (set_name != NULL && *set_name != '\0') ++tag->set_records;
             class_name = gd_record_field(&record, "Class");
             if (class_name != NULL && (starts(class_name, "Weapon") ||
                                        starts(class_name, "Armor"))) tag->gear = 1;
@@ -255,6 +260,7 @@ void gd_inference_finish(gd_inference *inference, gd_error *err)
         }
         tag->rarity = best < 0 ? GD_UNKNOWN : (gd_rarity)best;
         tag->affixable = tag->gear && !tag->faction && best >= 0 && best <= GD_RARE;
+        tag->set_item = tag->set_records * 2 > tag->name_records;
     }
     for (part = inference->parts; part != NULL; part = part->next) {
         gd_tag *base = find_tag(inference, part->base);

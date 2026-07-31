@@ -28,6 +28,8 @@ typedef struct gd_tag {
     int gear;
     int item_present;
     int set_item;
+    unsigned long set_records;
+    unsigned long name_records;
     int name_part;
     struct gd_tag *next;
     struct gd_tag *hash_next;

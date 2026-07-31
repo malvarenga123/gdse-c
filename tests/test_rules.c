@@ -149,8 +149,13 @@ static void full_rainbow_cases(void)
     t=gd_inference_ensure_tag(&inference,"legendary",&err);
     t->kind=GD_ITEM; t->item_present=1; t->gear=1; ++t->counts[GD_LEGENDARY];
     t=gd_inference_ensure_tag(&inference,"setpiece",&err);
-    t->kind=GD_ITEM; t->item_present=1; t->gear=1; t->set_item=1;
-    ++t->counts[GD_EPIC];
+    t->kind=GD_ITEM; t->item_present=1; t->gear=1;
+    t->set_records=1; t->name_records=1; ++t->counts[GD_EPIC];
+    /* A tag shared by a base item and its Empowered/Mythical upgrades, where
+       only one of the three tiers joins a set, is not a set name. */
+    t=gd_inference_ensure_tag(&inference,"sharedtag",&err);
+    t->kind=GD_ITEM; t->item_present=1; t->gear=1;
+    t->set_records=1; t->name_records=3; ++t->counts[GD_EPIC];
     t=gd_inference_ensure_tag(&inference,"factiongear",&err);
     t->kind=GD_ITEM; t->item_present=1; t->gear=1; t->faction=1;
     ++t->counts[GD_RARE];
@@ -177,6 +182,12 @@ static void full_rainbow_cases(void)
                         &inference,0,1,&count,&length,&err);
     expect_string("set marker",out,"setpiece=(S) {^B}Explorer's Footpads\r\n");
     if(count!=1)++failures;
+    free(out);
+    out=gd_recolor_text("sharedtag=Soiled Trousers\r\n",
+                        strlen("sharedtag=Soiled Trousers\r\n"),
+                        &inference,0,1,&count,&length,&err);
+    expect_string("minority set records",out,
+                  "sharedtag={^B}Soiled Trousers\r\n");
     free(out);
     /* The marker is Full Rainbow's alone; gdse's own scheme never emits it. */
     out=gd_recolor_text("setpiece=Explorer's Footpads\r\n",
