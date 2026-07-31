@@ -8,7 +8,7 @@
 - Clean: `make clean`.
 - MSYS2 MinGW build/test: `make` and `make test`; recipes follow the active POSIX shell even though `OS=Windows_NT`.
 - MinGW32 build/test: `mingw32-make` and `mingw32-make test` (produces `gdse.exe`). Cross-compile check: `make clean && make CC=i686-w64-mingw32-gcc EXE=.exe all`.
-- Run: `./gdse /path/to/game [--language en] [--out PATH] [--rainbow-filter-damage-colors]`.
+- Run from the game directory: `./gdse [--language LANG] [--out PATH] [--no-rainbow-filter-damage-colors]`; alternatively pass `/path/to/game` as the optional first positional argument. The language defaults to `en`, and Rainbow Filter damage colors default to enabled.
 - Project sources compile with `-std=c89 -pedantic -Wall -Wextra -Werror`. Vendored upstream sources compile with their supported dialect and are isolated behind project-owned interfaces.
 
 ## Architecture and map
@@ -25,7 +25,7 @@
 
 ## Conventions and footguns
 
-- The mandatory `GRIM_DAWN_INSTALL_PATH` positional argument must be an existing Grim Dawn tree. The base ARZ and requested base language ARC are mandatory; nonexistent DLC inputs are optional, but an existing unreadable/corrupt input is fatal.
+- The optional `GRIM_DAWN_INSTALL_PATH` positional argument must be an existing Grim Dawn tree; when omitted, gdse uses the current directory. The base ARZ and requested base language ARC are mandatory; nonexistent DLC inputs are optional, but an existing unreadable/corrupt input is fatal.
 - Default output is `settings/text_<language>`; use `--out` while developing.
 - Preserve source localization content, normalize existing line separators to CRLF, and preserve a missing final newline in rewriting code.
 - Output ownership is limited to paths in `.gdse-manifest`. Never broaden deletion beyond that manifest.

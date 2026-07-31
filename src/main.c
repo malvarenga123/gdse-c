@@ -22,9 +22,9 @@ typedef struct output_file {
 
 static void usage(FILE *stream)
 {
-    fprintf(stream, "Usage: gdse GRIM_DAWN_INSTALL_PATH\n");
+    fprintf(stream, "Usage: gdse [GRIM_DAWN_INSTALL_PATH]\n");
     fprintf(stream, "            [-l LANG|--language LANG] [-o PATH|--out PATH]\n");
-    fprintf(stream, "            [--rainbow-filter-damage-colors]\n");
+    fprintf(stream, "            [--no-rainbow-filter-damage-colors]\n");
 }
 
 static int ends_with(const char *text, const char *suffix)
@@ -246,32 +246,32 @@ int main(int argc, char **argv)
         "gdx2/database/GDX2.arz", "gdx3/database/GDX3.arz"};
     const char *language = "en", *out_arg = NULL, *install = NULL;
     char lang[64], arc_rel[256], *out = NULL, *stage = NULL;
-    int rainbow = 0, i, ok = 0;
+    int rainbow = 1, i, ok = 0;
     gd_error err; gd_inference inference; output_file *outputs = NULL;
     err.message[0] = '\0';
     for (i = 1; i < argc; ++i) {
         if ((strcmp(argv[i], "-l") == 0 || strcmp(argv[i], "--language") == 0) && i+1 < argc) language=argv[++i];
         else if ((strcmp(argv[i], "-o") == 0 || strcmp(argv[i], "--out") == 0) && i+1 < argc) out_arg=argv[++i];
-        else if (strcmp(argv[i], "--rainbow-filter-damage-colors") == 0) rainbow=1;
+        else if (strcmp(argv[i], "--no-rainbow-filter-damage-colors") == 0) rainbow=0;
         else if (strcmp(argv[i], "--version") == 0) { puts("gdse 0.1.0-c89"); return 0; }
         else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) { usage(stdout); return 0; }
         else if (argv[i][0] != '-' && install == NULL) install=argv[i];
         else { usage(stderr); return 2; }
     }
-    if (install == NULL) { fprintf(stderr,"GRIM_DAWN_INSTALL_PATH argument is required\n"); usage(stderr); return 2; }
+    if (install == NULL) install = ".";
     if (strlen(language) >= sizeof(lang)) { fprintf(stderr,"language is too long\n"); return 2; }
     strcpy(lang, language); for (i=0; lang[i]; ++i) lang[i]=(char)tolower((unsigned char)lang[i]);
     if (!gd_is_directory(install)) { fprintf(stderr,"GRIM_DAWN_INSTALL_PATH must name an existing directory: %s\n",install); return 1; }
     if (out_arg != NULL) out=gd_strdup(out_arg,&err);
     else { char settings[128]; sprintf(settings,"settings/text_%s",lang); out=gd_path_join(install,settings,&err); }
     if (out == NULL) goto done;
-    stage=(char *)gd_alloc(strlen(out)+20,&err); if(stage==NULL)goto done;
-    sprintf(stage,"%s.gdse-stage",out);
-    if (gd_path_exists(stage)) { gd_set_error(&err,"staging path already exists: %s",stage); goto done; }
-    if (!gd_mkdirs(stage,&err)) goto done;
     gd_inference_init(&inference);
     for(i=0;i<4;++i) if(!load_database(install,dbs[i],i==0,&inference,&err))goto cleanup_inference;
     gd_inference_finish(&inference,&err); if(err.message[0])goto cleanup_inference;
+    stage=(char *)gd_alloc(strlen(out)+20,&err); if(stage==NULL)goto cleanup_inference;
+    sprintf(stage,"%s.gdse-stage",out);
+    if (gd_path_exists(stage)) { gd_set_error(&err,"staging path already exists: %s",stage); goto cleanup_inference; }
+    if (!gd_mkdirs(stage,&err)) goto cleanup_inference;
     for(i=0;i<4;++i){ const char *prefix=i==0?"":i==1?"gdx1/":i==2?"gdx2/":"gdx3/"; sprintf(arc_rel,"%sresources/Text_",prefix); { size_t n=strlen(arc_rel),j; for(j=0;lang[j];++j)arc_rel[n+j]=(char)toupper((unsigned char)lang[j]); strcpy(arc_rel+n+j,".arc"); } if(!process_archive(install,arc_rel,i==0,stage,&inference,rainbow,&outputs,&err))goto cleanup_inference; }
     if(!publish(out,stage,outputs,&err))goto cleanup_inference;
     ok=1;
