@@ -371,8 +371,9 @@ static int scan_loot_table(gd_inference *inference, const gd_record *record,
    has nothing but master tables in its misc slots.
    Master tables are the shared world-drop pools every monster rolls from, so
    they are excluded; what is left is the table attached to this monster in
-   particular, and every item in it is a Monster Infrequent. Values naming an
-   item record rather than a table land as an empty table and mark nothing.
+   particular. Its Rare-and-above contents are Monster Infrequents; the Common
+   gear alongside them is what the monster wields. Values naming an item record
+   rather than a table land as an empty table and mark nothing.
    Pets and other non-monster actors never reach here: they are Class Pet and
    live outside records/creatures/. */
 static int scan_creature(gd_inference *inference, const gd_record *record,
@@ -515,7 +516,13 @@ void gd_inference_finish(gd_inference *inference, gd_error *err)
             gd_tag *owner;
             if (item == NULL) continue;
             owner = find_tag(inference, item->tag);
-            if (owner != NULL) owner->monster_infrequent = 1;
+            /* Only Rare and above. A monster's loot slots also hold the
+               ordinary Common gear it wields, which is not an Infrequent and
+               which Full Rainbow leaves at its base color. */
+            if (owner != NULL &&
+                (owner->rarity == GD_RARE || owner->rarity == GD_EPIC ||
+                 owner->rarity == GD_LEGENDARY))
+                owner->monster_infrequent = 1;
         }
     }
     for (part = inference->parts; part != NULL; part = part->next) {
@@ -573,9 +580,7 @@ static char tag_color_of(const gd_tag *tag, int full_rainbow)
         if (tag->monster_infrequent) {
             if (tag->rarity == GD_EPIC) return 'z';
             if (tag->rarity == GD_LEGENDARY) return 'f';
-            if (tag->rarity == GD_COMMON || tag->rarity == GD_MAGICAL ||
-                tag->rarity == GD_RARE) return 'l';
-            return 0;
+            return 'l';
         }
         if (tag->rarity == GD_COMMON) return 'w';
         if (tag->rarity == GD_MAGICAL) return 'y';

@@ -222,6 +222,12 @@ static void monster_infrequent_cases(void)
     t->kind=GD_ITEM; t->item_present=1; t->gear=1; ++t->counts[GD_COMMON];
     if(!add_item_path_for_test(&inference,"records/items/w/sabre.dbr",
                                "tagSabre",&err))++failures;
+    /* Common gear sitting in a monster's own loot slot is what it wields, not
+       an Infrequent. */
+    t=gd_inference_ensure_tag(&inference,"tagWieldedClub",&err);
+    t->kind=GD_ITEM; t->item_present=1; t->gear=1; ++t->counts[GD_COMMON];
+    if(!add_item_path_for_test(&inference,"records/items/w/club.dbr",
+                               "tagWieldedClub",&err))++failures;
 
     /* Two monster-attached tables and one the monster never names. */
     if(!add_loot_entry_for_test(&inference,"records/items/loottables/t_yeti.dbr",
@@ -236,6 +242,8 @@ static void monster_infrequent_cases(void)
     table=ensure_loot_table_for_test(&inference,
                                      "records/items/loottables/t_boss.dbr",&err);
     if(table==NULL)++failures; else table->monster_drop=1;
+    if(!add_loot_entry_for_test(&inference,"records/items/loottables/t_yeti.dbr",
+                                "records/items/w/club.dbr",&err))++failures;
 
     gd_inference_finish(&inference,&err);
 
@@ -243,6 +251,8 @@ static void monster_infrequent_cases(void)
     if(gd_tag_color(&inference,"tagBossBlade",1)!='f')++failures;
     /* Reached only through a table no monster names: an ordinary base. */
     if(gd_tag_color(&inference,"tagSabre",1)!='w')++failures;
+    /* In a monster's own table, but Common: still an ordinary base. */
+    if(gd_tag_color(&inference,"tagWieldedClub",1)!='w')++failures;
     /* gdse's own scheme never emits MI colors. */
     if(gd_tag_color(&inference,"tagYetiHorn",0)!='g')++failures;
     if(gd_tag_color(&inference,"tagBossBlade",0)!=0)++failures;
