@@ -12,6 +12,7 @@ struct gd_arz {
     gd_u32 *record_offsets;
     char **strings;
     gd_u32 string_count;
+    int scan_creatures;
 };
 
 struct gd_arc {
@@ -168,6 +169,11 @@ void gd_arz_close(gd_arz *db)
 
 gd_u32 gd_arz_count(const gd_arz *db) { return db->record_count; }
 
+void gd_arz_scan_creatures(gd_arz *db, int enabled)
+{
+    db->scan_creatures = enabled;
+}
+
 static gd_u16 mem_u16(const gd_u8 *p)
 {
     return (gd_u16)((gd_u16)p[0] | ((gd_u16)p[1] << 8));
@@ -246,7 +252,11 @@ int gd_arz_record(gd_arz *db, gd_u32 index, gd_record *record, gd_error *err)
     }
     record->id = gd_strdup(db->strings[string_index], err);
     if (record->id == NULL) return 0;
-    if (strncmp(record->id, "records/items/", 14) != 0) return 1;
+    /* Only records the inference pass can use are worth decompressing. Creature
+       records are read only when Monster Infrequent inference asks for them. */
+    if (strncmp(record->id, "records/items/", 14) != 0 &&
+        !(db->scan_creatures &&
+          strncmp(record->id, "records/creatures/", 18) == 0)) return 1;
     if (compressed_len > 256UL * 1024UL * 1024UL ||
         uncompressed_len > 256UL * 1024UL * 1024UL ||
         !gd_seek(db->file, offset + 24UL, err)) goto fail;

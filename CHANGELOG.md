@@ -14,8 +14,9 @@ unless the repository documents a different versioning policy.
   Rainbow Filter mod: Epic and Legendary names are colored instead of left to
   the engine, set-item names are marked with `(S) `, faction gear is colored by
   its rarity, and style/quality words are painted silver rather than taking the
-  base name's white. Rainbow Filter's separate Monster Infrequent color is not
-  reproduced.
+  base name's white, and Monster Infrequents take their own colors, identified
+  from monster drop-slot references to loot tables rather than from any
+  hand-maintained list.
 - Added ISO C89 builds with POSIX `make`, including vendored LZ4 and utf8proc
   dependencies so builds do not need to download third-party packages.
 - Added native MinGW32 and MSYS2 build support for Windows.

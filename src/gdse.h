@@ -31,9 +31,34 @@ typedef struct gd_tag {
     unsigned long set_records;
     unsigned long name_records;
     int name_part;
+    int monster_infrequent;
     struct gd_tag *next;
     struct gd_tag *hash_next;
 } gd_tag;
+
+/* A record path under records/items/ that carries an itemNameTag. Loot tables
+   name their contents by path, so resolving them back to tags needs this. */
+typedef struct gd_item_path {
+    char *path;
+    char *tag;
+    struct gd_item_path *next;
+    struct gd_item_path *hash_next;
+} gd_item_path;
+
+typedef struct gd_loot_entry {
+    char *item_path;
+    struct gd_loot_entry *next;
+} gd_loot_entry;
+
+/* A records/items/loottables/ record: what it contains, and whether a monster
+   names it in one of its own drop slots. */
+typedef struct gd_loot_table {
+    char *path;
+    gd_loot_entry *entries;
+    int monster_drop;
+    struct gd_loot_table *next;
+    struct gd_loot_table *hash_next;
+} gd_loot_table;
 
 typedef struct gd_part {
     char *name;
@@ -46,12 +71,20 @@ typedef struct gd_part {
 typedef struct gd_inference {
     gd_tag *tags;
     gd_part *parts;
+    gd_item_path *item_paths;
+    gd_loot_table *loot_tables;
     gd_tag **tag_buckets;
     gd_part **part_buckets;
+    gd_item_path **item_path_buckets;
+    gd_loot_table **loot_table_buckets;
     size_t tag_bucket_count;
     size_t part_bucket_count;
+    size_t item_path_bucket_count;
+    size_t loot_table_bucket_count;
     size_t tag_count;
     size_t part_count;
+    size_t item_path_count;
+    size_t loot_table_count;
 } gd_inference;
 
 typedef struct gd_field {
@@ -83,6 +116,7 @@ char *gd_path_join(const char *left, const char *right, gd_error *err);
 int gd_safe_record_path(const char *path);
 
 gd_arz *gd_arz_open(const char *path, gd_error *err);
+void gd_arz_scan_creatures(gd_arz *db, int enabled);
 void gd_arz_close(gd_arz *db);
 gd_u32 gd_arz_count(const gd_arz *db);
 int gd_arz_record(gd_arz *db, gd_u32 index, gd_record *record, gd_error *err);
@@ -96,6 +130,12 @@ int gd_arc_record(gd_arc *arc, gd_u32 index, char **id, gd_u8 **data,
                   size_t *length, gd_error *err);
 
 void gd_inference_init(gd_inference *inference);
+int add_item_path_for_test(gd_inference *inference, const char *path,
+                           const char *tag, gd_error *err);
+int add_loot_entry_for_test(gd_inference *inference, const char *table_path,
+                            const char *item_path, gd_error *err);
+gd_loot_table *ensure_loot_table_for_test(gd_inference *inference,
+                                          const char *path, gd_error *err);
 gd_tag *gd_inference_ensure_tag(gd_inference *inference, const char *name,
                                 gd_error *err);
 int gd_inference_add_part(gd_inference *inference, const char *part,

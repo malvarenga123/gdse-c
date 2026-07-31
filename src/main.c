@@ -115,7 +115,8 @@ static int write_file(const char *path, const void *data, size_t length,
 }
 
 static int load_database(const char *install, const char *rel, int required,
-                         gd_inference *inference, gd_error *err)
+                         int full_rainbow, gd_inference *inference,
+                         gd_error *err)
 {
     char *path = gd_path_join(install, rel, err);
     gd_arz *db;
@@ -127,6 +128,7 @@ static int load_database(const char *install, const char *rel, int required,
     }
     db = gd_arz_open(path, err); free(path);
     if (db == NULL) return 0;
+    gd_arz_scan_creatures(db, full_rainbow);
     ok = gd_infer_database(inference, db, err);
     gd_arz_close(db);
     return ok;
@@ -269,7 +271,7 @@ int main(int argc, char **argv)
     else { char settings[128]; sprintf(settings,"settings/text_%s",lang); out=gd_path_join(install,settings,&err); }
     if (out == NULL) goto done;
     gd_inference_init(&inference);
-    for(i=0;i<4;++i) if(!load_database(install,dbs[i],i==0,&inference,&err))goto cleanup_inference;
+    for(i=0;i<4;++i) if(!load_database(install,dbs[i],i==0,full_rainbow,&inference,&err))goto cleanup_inference;
     gd_inference_finish(&inference,&err); if(err.message[0])goto cleanup_inference;
     stage=(char *)gd_alloc(strlen(out)+20,&err); if(stage==NULL)goto cleanup_inference;
     sprintf(stage,"%s.gdse-stage",out);

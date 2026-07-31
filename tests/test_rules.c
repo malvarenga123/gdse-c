@@ -200,10 +200,59 @@ static void full_rainbow_cases(void)
     gd_inference_free(&inference);
 }
 
+/* Monster Infrequent inference: an item in a loot table a monster names in its
+   own drop slots takes Full Rainbow's MI color for its tier. */
+static void monster_infrequent_cases(void)
+{
+    gd_inference inference;
+    gd_error err;
+    gd_tag *t;
+    gd_loot_table *table;
+    gd_inference_init(&inference);
+
+    t=gd_inference_ensure_tag(&inference,"tagYetiHorn",&err);
+    t->kind=GD_ITEM; t->item_present=1; t->gear=1; ++t->counts[GD_RARE];
+    if(!add_item_path_for_test(&inference,"records/items/f/yeti.dbr",
+                               "tagYetiHorn",&err))++failures;
+    t=gd_inference_ensure_tag(&inference,"tagBossBlade",&err);
+    t->kind=GD_ITEM; t->item_present=1; t->gear=1; ++t->counts[GD_LEGENDARY];
+    if(!add_item_path_for_test(&inference,"records/items/w/boss.dbr",
+                               "tagBossBlade",&err))++failures;
+    t=gd_inference_ensure_tag(&inference,"tagSabre",&err);
+    t->kind=GD_ITEM; t->item_present=1; t->gear=1; ++t->counts[GD_COMMON];
+    if(!add_item_path_for_test(&inference,"records/items/w/sabre.dbr",
+                               "tagSabre",&err))++failures;
+
+    /* Two monster-attached tables and one the monster never names. */
+    if(!add_loot_entry_for_test(&inference,"records/items/loottables/t_yeti.dbr",
+                                "records/items/f/yeti.dbr",&err))++failures;
+    if(!add_loot_entry_for_test(&inference,"records/items/loottables/t_boss.dbr",
+                                "records/items/w/boss.dbr",&err))++failures;
+    if(!add_loot_entry_for_test(&inference,"records/items/loottables/t_craft.dbr",
+                                "records/items/w/sabre.dbr",&err))++failures;
+    table=ensure_loot_table_for_test(&inference,
+                                     "records/items/loottables/t_yeti.dbr",&err);
+    if(table==NULL)++failures; else table->monster_drop=1;
+    table=ensure_loot_table_for_test(&inference,
+                                     "records/items/loottables/t_boss.dbr",&err);
+    if(table==NULL)++failures; else table->monster_drop=1;
+
+    gd_inference_finish(&inference,&err);
+
+    if(gd_tag_color(&inference,"tagYetiHorn",1)!='l')++failures;
+    if(gd_tag_color(&inference,"tagBossBlade",1)!='f')++failures;
+    /* Reached only through a table no monster names: an ordinary base. */
+    if(gd_tag_color(&inference,"tagSabre",1)!='w')++failures;
+    /* gdse's own scheme never emits MI colors. */
+    if(gd_tag_color(&inference,"tagYetiHorn",0)!='g')++failures;
+    if(gd_tag_color(&inference,"tagBossBlade",0)!=0)++failures;
+    gd_inference_free(&inference);
+}
+
 int main(void)
 {
     apply_cases(); property_cases(); rewrite_cases(); inference_cases();
-    index_cases(); full_rainbow_cases();
+    index_cases(); full_rainbow_cases(); monster_infrequent_cases();
     if(failures){fprintf(stderr,"%d tests failed\n",failures);return 1;}
     puts("all tests passed"); return 0;
 }

@@ -118,12 +118,20 @@ void gd_inference_init(gd_inference *inference)
 {
     inference->tags = NULL;
     inference->parts = NULL;
+    inference->item_paths = NULL;
+    inference->loot_tables = NULL;
     inference->tag_buckets = NULL;
     inference->part_buckets = NULL;
+    inference->item_path_buckets = NULL;
+    inference->loot_table_buckets = NULL;
     inference->tag_bucket_count = 0;
     inference->part_bucket_count = 0;
+    inference->item_path_bucket_count = 0;
+    inference->loot_table_bucket_count = 0;
     inference->tag_count = 0;
     inference->part_count = 0;
+    inference->item_path_count = 0;
+    inference->loot_table_count = 0;
 }
 
 static int resize_parts(gd_inference *inference, size_t count, gd_error *err)
@@ -185,6 +193,222 @@ int gd_inference_add_part(gd_inference *inference, const char *part,
     return 1;
 }
 
+/* Loot tables name their contents by record path, and a monster names its drop
+   tables the same way, so Monster Infrequent inference needs two more indexes:
+   record path -> itemNameTag, and loot-table path -> the paths it contains. */
+
+static gd_item_path *find_item_path(const gd_inference *inference,
+                                    const char *path)
+{
+    gd_item_path *entry;
+    size_t bucket;
+    if (inference->item_path_bucket_count == 0) return NULL;
+    bucket = (size_t)(hash_text(path) % inference->item_path_bucket_count);
+    for (entry = inference->item_path_buckets[bucket]; entry != NULL;
+         entry = entry->hash_next)
+        if (strcmp(entry->path, path) == 0) return entry;
+    return NULL;
+}
+
+static int resize_item_paths(gd_inference *inference, size_t count,
+                             gd_error *err)
+{
+    gd_item_path **buckets;
+    gd_item_path *entry;
+    size_t i;
+    if (count > ((size_t)-1) / sizeof(*buckets)) {
+        gd_set_error(err, "item path index is too large");
+        return 0;
+    }
+    buckets = (gd_item_path **)gd_alloc(count * sizeof(*buckets), err);
+    if (buckets == NULL) return 0;
+    memset(buckets, 0, count * sizeof(*buckets));
+    for (entry = inference->item_paths; entry != NULL; entry = entry->next) {
+        i = (size_t)(hash_text(entry->path) % count);
+        entry->hash_next = buckets[i];
+        buckets[i] = entry;
+    }
+    free(inference->item_path_buckets);
+    inference->item_path_buckets = buckets;
+    inference->item_path_bucket_count = count;
+    return 1;
+}
+
+static int add_item_path(gd_inference *inference, const char *path,
+                         const char *tag, gd_error *err)
+{
+    gd_item_path *entry;
+    size_t bucket;
+    if (find_item_path(inference, path) != NULL) return 1;
+    if (inference->item_path_bucket_count == 0) {
+        if (!resize_item_paths(inference, 16, err)) return 0;
+    } else if (inference->item_path_count >=
+               inference->item_path_bucket_count -
+               inference->item_path_bucket_count / 4) {
+        if (inference->item_path_bucket_count > ((size_t)-1) / 2 ||
+            !resize_item_paths(inference,
+                               inference->item_path_bucket_count * 2, err))
+            return 0;
+    }
+    entry = (gd_item_path *)gd_alloc(sizeof(*entry), err);
+    if (entry == NULL) return 0;
+    memset(entry, 0, sizeof(*entry));
+    entry->path = gd_strdup(path, err);
+    entry->tag = gd_strdup(tag, err);
+    if (entry->path == NULL || entry->tag == NULL) {
+        free(entry->path); free(entry->tag); free(entry); return 0;
+    }
+    entry->next = inference->item_paths;
+    inference->item_paths = entry;
+    bucket = (size_t)(hash_text(path) % inference->item_path_bucket_count);
+    entry->hash_next = inference->item_path_buckets[bucket];
+    inference->item_path_buckets[bucket] = entry;
+    ++inference->item_path_count;
+    return 1;
+}
+
+static gd_loot_table *find_loot_table(const gd_inference *inference,
+                                      const char *path)
+{
+    gd_loot_table *table;
+    size_t bucket;
+    if (inference->loot_table_bucket_count == 0) return NULL;
+    bucket = (size_t)(hash_text(path) % inference->loot_table_bucket_count);
+    for (table = inference->loot_table_buckets[bucket]; table != NULL;
+         table = table->hash_next)
+        if (strcmp(table->path, path) == 0) return table;
+    return NULL;
+}
+
+static int resize_loot_tables(gd_inference *inference, size_t count,
+                              gd_error *err)
+{
+    gd_loot_table **buckets;
+    gd_loot_table *table;
+    size_t i;
+    if (count > ((size_t)-1) / sizeof(*buckets)) {
+        gd_set_error(err, "loot table index is too large");
+        return 0;
+    }
+    buckets = (gd_loot_table **)gd_alloc(count * sizeof(*buckets), err);
+    if (buckets == NULL) return 0;
+    memset(buckets, 0, count * sizeof(*buckets));
+    for (table = inference->loot_tables; table != NULL; table = table->next) {
+        i = (size_t)(hash_text(table->path) % count);
+        table->hash_next = buckets[i];
+        buckets[i] = table;
+    }
+    free(inference->loot_table_buckets);
+    inference->loot_table_buckets = buckets;
+    inference->loot_table_bucket_count = count;
+    return 1;
+}
+
+/* A creature may name a table before or after the table's own record is read,
+   so the entry is created on first mention either way. */
+static gd_loot_table *ensure_loot_table(gd_inference *inference,
+                                        const char *path, gd_error *err)
+{
+    gd_loot_table *table = find_loot_table(inference, path);
+    size_t bucket;
+    if (table != NULL) return table;
+    if (inference->loot_table_bucket_count == 0) {
+        if (!resize_loot_tables(inference, 16, err)) return NULL;
+    } else if (inference->loot_table_count >=
+               inference->loot_table_bucket_count -
+               inference->loot_table_bucket_count / 4) {
+        if (inference->loot_table_bucket_count > ((size_t)-1) / 2 ||
+            !resize_loot_tables(inference,
+                                inference->loot_table_bucket_count * 2, err))
+            return NULL;
+    }
+    table = (gd_loot_table *)gd_alloc(sizeof(*table), err);
+    if (table == NULL) return NULL;
+    memset(table, 0, sizeof(*table));
+    table->path = gd_strdup(path, err);
+    if (table->path == NULL) { free(table); return NULL; }
+    table->next = inference->loot_tables;
+    inference->loot_tables = table;
+    bucket = (size_t)(hash_text(path) % inference->loot_table_bucket_count);
+    table->hash_next = inference->loot_table_buckets[bucket];
+    inference->loot_table_buckets[bucket] = table;
+    ++inference->loot_table_count;
+    return table;
+}
+
+static int add_loot_entry(gd_inference *inference, const char *table_path,
+                          const char *item_path, gd_error *err)
+{
+    gd_loot_table *table = ensure_loot_table(inference, table_path, err);
+    gd_loot_entry *entry;
+    if (table == NULL) return 0;
+    entry = (gd_loot_entry *)gd_alloc(sizeof(*entry), err);
+    if (entry == NULL) return 0;
+    entry->item_path = gd_strdup(item_path, err);
+    if (entry->item_path == NULL) { free(entry); return 0; }
+    entry->next = table->entries;
+    table->entries = entry;
+    return 1;
+}
+
+/* lootName1..N name the records a table can yield. */
+static int scan_loot_table(gd_inference *inference, const gd_record *record,
+                           gd_error *err)
+{
+    const gd_field *field;
+    for (field = record->fields; field != NULL; field = field->next) {
+        if (!starts(field->key, "lootName")) continue;
+        if (*field->value == '\0') continue;
+        if (!add_loot_entry(inference, record->id, field->value, err)) return 0;
+    }
+    return 1;
+}
+
+/* A monster's lootMisc<N>Item<M> fields are its own drop slots, as distinct
+   from the loot<Slot>Item<M> fields that hold the gear it wields. Full Rainbow
+   treats exactly the former as Monster Infrequent sources. Master tables are
+   the shared world-drop pools every monster rolls from, so they are excluded;
+   what is left is the table attached to this monster in particular. Pets and
+   other non-monster actors never reach here: they are Class Pet and live
+   outside records/creatures/. */
+static int scan_creature(gd_inference *inference, const gd_record *record,
+                         gd_error *err)
+{
+    const gd_field *field;
+    const char *class_name = gd_record_field(record, "Class");
+    if (class_name == NULL || !starts(class_name, "Monster")) return 1;
+    for (field = record->fields; field != NULL; field = field->next) {
+        gd_loot_table *table;
+        if (!starts(field->key, "lootMisc")) continue;
+        if (*field->value == '\0') continue;
+        if (strstr(field->value, "/loottables/mastertables/") != NULL) continue;
+        table = ensure_loot_table(inference, field->value, err);
+        if (table == NULL) return 0;
+        table->monster_drop = 1;
+    }
+    return 1;
+}
+
+/* Thin wrappers so the test suite can build inference state directly; the
+   loot-table indexes are otherwise only reachable from a real database. */
+int add_item_path_for_test(gd_inference *inference, const char *path,
+                           const char *tag, gd_error *err)
+{
+    return add_item_path(inference, path, tag, err);
+}
+
+int add_loot_entry_for_test(gd_inference *inference, const char *table_path,
+                            const char *item_path, gd_error *err)
+{
+    return add_loot_entry(inference, table_path, item_path, err);
+}
+
+gd_loot_table *ensure_loot_table_for_test(gd_inference *inference,
+                                          const char *path, gd_error *err)
+{
+    return ensure_loot_table(inference, path, err);
+}
+
 int gd_infer_database(gd_inference *inference, gd_arz *db, gd_error *err)
 {
     gd_u32 i;
@@ -195,7 +419,15 @@ int gd_infer_database(gd_inference *inference, gd_arz *db, gd_error *err)
         gd_rarity rank;
         gd_tag *tag;
         if (!gd_arz_record(db, i, &record, err)) return 0;
+        if (starts(record.id, "records/creatures/")) {
+            if (!scan_creature(inference, &record, err)) { gd_record_free(&record); return 0; }
+            gd_record_free(&record); continue;
+        }
         if (!starts(record.id, "records/items/")) { gd_record_free(&record); continue; }
+        if (starts(record.id, "records/items/loottables/")) {
+            if (!scan_loot_table(inference, &record, err)) { gd_record_free(&record); return 0; }
+            gd_record_free(&record); continue;
+        }
         if (starts(record.id, "records/items/lootaffixes/prefix/") ||
             starts(record.id, "records/items/lootaffixes/suffix/")) {
             tag_name = gd_record_field(&record, "lootRandomizerName");
@@ -216,6 +448,9 @@ int gd_infer_database(gd_inference *inference, gd_arz *db, gd_error *err)
             if (tag_name == NULL || *tag_name == '\0') { gd_record_free(&record); continue; }
             tag = gd_inference_ensure_tag(inference, tag_name, err);
             if (tag == NULL) { gd_record_free(&record); return 0; }
+            if (!add_item_path(inference, record.id, tag_name, err)) {
+                gd_record_free(&record); return 0;
+            }
             /* A non-empty itemSetName points at the set record this base
                belongs to; Full Rainbow marks those names with "(S) ". One tag
                is often shared by a base item and its Empowered/Mythical
@@ -250,6 +485,7 @@ void gd_inference_finish(gd_inference *inference, gd_error *err)
 {
     gd_tag *tag;
     gd_part *part;
+    gd_loot_table *table;
     (void)err;
     for (tag = inference->tags; tag != NULL; tag = tag->next) {
         int i, best = -1;
@@ -261,6 +497,21 @@ void gd_inference_finish(gd_inference *inference, gd_error *err)
         tag->rarity = best < 0 ? GD_UNKNOWN : (gd_rarity)best;
         tag->affixable = tag->gear && !tag->faction && best >= 0 && best <= GD_RARE;
         tag->set_item = tag->set_records * 2 > tag->name_records;
+    }
+    /* Every item in a table a monster names in its own drop slots is a Monster
+       Infrequent. The table may be read before or after the creature naming it,
+       so this resolves once both passes are complete. */
+    for (table = inference->loot_tables; table != NULL; table = table->next) {
+        gd_loot_entry *entry;
+        if (!table->monster_drop) continue;
+        for (entry = table->entries; entry != NULL; entry = entry->next) {
+            const gd_item_path *item =
+                find_item_path(inference, entry->item_path);
+            gd_tag *owner;
+            if (item == NULL) continue;
+            owner = find_tag(inference, item->tag);
+            if (owner != NULL) owner->monster_infrequent = 1;
+        }
     }
     for (part = inference->parts; part != NULL; part = part->next) {
         gd_tag *base = find_tag(inference, part->base);
@@ -283,8 +534,19 @@ void gd_inference_free(gd_inference *inference)
     gd_part *part = inference->parts;
     while (tag != NULL) { gd_tag *next = tag->next; free(tag->name); free(tag); tag = next; }
     while (part != NULL) { gd_part *next = part->next; free(part->name); free(part->base); free(part); part = next; }
+    { gd_item_path *item = inference->item_paths;
+      while (item != NULL) { gd_item_path *n = item->next; free(item->path); free(item->tag); free(item); item = n; } }
+    { gd_loot_table *table = inference->loot_tables;
+      while (table != NULL) {
+          gd_loot_table *n = table->next;
+          gd_loot_entry *entry = table->entries;
+          while (entry != NULL) { gd_loot_entry *e = entry->next; free(entry->item_path); free(entry); entry = e; }
+          free(table->path); free(table); table = n;
+      } }
     free(inference->tag_buckets);
     free(inference->part_buckets);
+    free(inference->item_path_buckets);
+    free(inference->loot_table_buckets);
     gd_inference_init(inference);
 }
 
@@ -302,6 +564,14 @@ static char tag_color_of(const gd_tag *tag, int full_rainbow)
     if (tag == NULL) return 0;
     if (full_rainbow) {
         if (tag->name_part) return 's';
+        /* Monster Infrequents take their own colors at every tier. */
+        if (tag->monster_infrequent) {
+            if (tag->rarity == GD_EPIC) return 'z';
+            if (tag->rarity == GD_LEGENDARY) return 'f';
+            if (tag->rarity == GD_COMMON || tag->rarity == GD_MAGICAL ||
+                tag->rarity == GD_RARE) return 'l';
+            return 0;
+        }
         if (tag->rarity == GD_COMMON) return 'w';
         if (tag->rarity == GD_MAGICAL) return 'y';
         if (tag->rarity == GD_RARE) return 'g';
