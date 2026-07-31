@@ -39,7 +39,7 @@ flowchart LR
 ## Compatibility and limitations
 
 - Inline color markers retain the four-byte `{^X}` format and the Rust implementation's placement ordering.
-- `--full-rainbow` derives every category it covers from `records/items/` fields already read (`itemClassification`, `itemSetName`, the faction record path, and the style/quality tag fields); it carries no per-item table. Rainbow Filter's Monster Infrequent color is excluded because that distinction is not present in those fields.
+- `--full-rainbow` derives every category it covers from the database and carries no per-item table: `itemClassification`, `itemSetName`, the faction record path and the style/quality tag fields for the item categories, and monster drop-slot references resolved through loot tables for Monster Infrequents.
 - Supported ARZ and ARC format version is 3, matching the former `lib_gddb` dependency.
 - Full-directory atomic replacement is intentionally avoided because output may coexist with unrelated files. Individual renames are atomic where the filesystem provides that guarantee; the backup rollback protects multi-file publication failures on a best-effort basis.
 - Real game archives, Windows behavior, non-English archives, and crash injection during filesystem publication remain unverified in this checkout.

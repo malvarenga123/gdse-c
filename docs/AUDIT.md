@@ -75,7 +75,7 @@ No line differs in text. Every difference in either run is a color marker or Ful
 
 | Cause | Lines | Actionable |
 | --- | --- | --- |
-| Monster Infrequent coloring | 148 | Only with a new inference pass over creature loot tables |
+| Monster Infrequent coloring | 148 | Yes — implemented after this measurement, pending re-measurement |
 | Tags absent from Full Rainbow's list | 103 | No — gdse colors ordinary gear it has no entry for |
 | Tags with no item record at all | 15 | No |
 | Enemy-only gear | 5 | No |
@@ -83,7 +83,7 @@ No line differs in text. Every difference in either run is a color marker or Ful
 
 ### Findings
 
-- **Monster Infrequents are not distinguishable from `records/items/` fields.** Full Rainbow paints them `{^L}`, and `{^Z}`/`{^F}` at Epic/Legendary tier. The distinction tracks whether a named creature drops the item, which lives in creature and loot-table records outside the `records/items/` scope gdse reads. Base rarity does not separate them: `Bloodsworn Repeater` is `{^L}` while `Hand Mortar`, `Shrapnel Pistol` and `Francis' Gun` are `{^G}`, and gdse classifies all four identically as Rare bases.
+- **Monster Infrequents are distinguishable, but not from `records/items/` alone.** *(Superseded — see the note below.)* Full Rainbow paints them `{^L}`, and `{^Z}`/`{^F}` at Epic/Legendary tier. The distinction tracks whether a named creature drops the item, which lives in creature and loot-table records outside the `records/items/` scope gdse reads. Base rarity does not separate them: `Bloodsworn Repeater` is `{^L}` while `Hand Mortar`, `Shrapnel Pistol` and `Francis' Gun` are `{^G}`, and gdse classifies all four identically as Rare bases.
 
 - **Tags with no item record at all account for 15 lines.** Confirmed absent from the database: `tagHeadA010`, `tagShieldA011`, `tagQualityWeaponWood06` through `11`, `tagQuestItemSlithRing`, `tagShoulderF005`, `tagShoulderF010`, `tagTorsoF005`, `tagTorsoF010`. `tagQuestItemBrothersAmulet` and `tagItemTest` are presumed the same but were not separately confirmed. Full Rainbow colors text the game never displays; inference has nothing to work from. `tagQualityWeaponWood05`, which does have six records, is colored correctly, so the mechanism is sound.
 
@@ -94,6 +94,14 @@ No line differs in text. Every difference in either run is a color marker or Ful
 - **The `Empowered` / `Mythical` unique styles cannot be separated from `Polarized`.** An implementation coloring a style word by the tier of the bases it reaches was built and measured. It colored `tagStyleUniqueTier2` `{^A}` and `tagStyleUniqueTier3` `{^P}` correctly, but also colored `tagStyleUniqueInverted` (`Polarized`), which Full Rainbow leaves plain. `Polarized` is a unique style on non-faction gear reaching Legendary bases — identical to `Mythical` in every field gdse reads. Two correct lines were not worth one visibly wrong one, so the category was dropped.
 
 - **A tag's records can disagree with each other.** One `itemNameTag` is shared by an item and its upgrade tiers, and those tiers are separate records that can differ. `tagLegsC005` ("Soiled Trousers") has four: a level-18 Epic base, a level-75 Empowered tier, an upgraded tier, and a level-94 awakened tier added in GDX3 — and only the awakened one carries an `itemSetName`. Any per-tag property derived from records must therefore be resolved across all of them rather than latched from the first hit; set membership uses a strict majority for this reason. Expansion databases matter here: a base-game-only search for `tagLegsC005` misses the record that mattered.
+
+### Monster Infrequent inference (2026-07-31, after the measurement above)
+
+The 148 Monster Infrequent lines were subsequently found to be derivable, and `--full-rainbow` now colors them. A monster record names its own drop tables in `lootMisc<N>Item<M>` fields, which are distinct from the `loot<Slot>Item<M>` fields holding the gear it wields; excluding the shared `loottables/mastertables/` pools leaves the table attached to that monster in particular, and every item in it is a Monster Infrequent.
+
+Confirmed against real records: Yeti Horn, Gollus' Ring and Gutworm's Mark each resolve through a monster's drop slot, while Honed Longsword and Battle Shield reach only crafting blueprints and Francis' Gun only a lore-chest table. The near-miss worth remembering is the Sabre, an ordinary white base reachable from the Necromancer's summoned skeleton — pets are `Class,Pet`, carry `dropItems,0`, and live under `records/skills/`, so they never enter a scan scoped to `records/creatures/`.
+
+This costs about 5,200 extra record decompressions and only when the flag is set. **It has not yet been measured against the distributed Full Rainbow file**; the 273-line figure above predates it.
 
 ## Residual risks and follow-up
 
