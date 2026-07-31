@@ -211,10 +211,15 @@ int gd_infer_database(gd_inference *inference, gd_arz *db, gd_error *err)
         } else {
             const char *class_name;
             const char *part;
+            const char *set_name;
             tag_name = gd_record_field(&record, "itemNameTag");
             if (tag_name == NULL || *tag_name == '\0') { gd_record_free(&record); continue; }
             tag = gd_inference_ensure_tag(inference, tag_name, err);
             if (tag == NULL) { gd_record_free(&record); return 0; }
+            /* A non-empty itemSetName points at the set record this base
+               belongs to; Full Rainbow marks those names with "(S) ". */
+            set_name = gd_record_field(&record, "itemSetName");
+            if (set_name != NULL && *set_name != '\0') tag->set_item = 1;
             class_name = gd_record_field(&record, "Class");
             if (class_name != NULL && (starts(class_name, "Weapon") ||
                                        starts(class_name, "Armor"))) tag->gear = 1;
@@ -261,6 +266,7 @@ void gd_inference_finish(gd_inference *inference, gd_error *err)
             if (word == NULL) return;
             word->kind = GD_ITEM; word->rarity = GD_COMMON;
             word->affixable = 1; word->item_present = 1;
+            word->name_part = 1;
         }
     }
 }
@@ -276,17 +282,38 @@ void gd_inference_free(gd_inference *inference)
     gd_inference_init(inference);
 }
 
-char gd_tag_color(const gd_inference *inference, const char *name)
+const gd_tag *gd_tag_lookup(const gd_inference *inference, const char *name)
 {
-    const gd_tag *tag = find_tag(inference, name);
-    if (tag != NULL) {
-        if (tag->kind == GD_ITEM && !tag->affixable) return 0;
+    return find_tag(inference, name);
+}
+
+/* gdse's own scheme colors only the rarities that can carry a name-altering
+   affix, and only base names that can actually roll one. Full Rainbow instead
+   colors every rarity on every name, paints style/quality words silver, and
+   makes no exception for faction gear. */
+static char tag_color_of(const gd_tag *tag, int full_rainbow)
+{
+    if (tag == NULL) return 0;
+    if (full_rainbow) {
+        if (tag->name_part) return 's';
         if (tag->rarity == GD_COMMON) return 'w';
         if (tag->rarity == GD_MAGICAL) return 'y';
         if (tag->rarity == GD_RARE) return 'g';
+        if (tag->rarity == GD_EPIC) return 'b';
+        if (tag->rarity == GD_LEGENDARY) return 'i';
         return 0;
     }
+    if (tag->kind == GD_ITEM && !tag->affixable) return 0;
+    if (tag->rarity == GD_COMMON) return 'w';
+    if (tag->rarity == GD_MAGICAL) return 'y';
+    if (tag->rarity == GD_RARE) return 'g';
     return 0;
+}
+
+char gd_tag_color(const gd_inference *inference, const char *name,
+                  int full_rainbow)
+{
+    return tag_color_of(find_tag(inference, name), full_rainbow);
 }
 
 char gd_property_color(const char *tag, int rainbow)
@@ -426,10 +453,26 @@ char *gd_apply_color(const char *value, char color, gd_error *err)
     out[pos] = '\0'; return out;
 }
 
+/* Full Rainbow prefixes set-item names with "(S) ", ahead of the color code. */
+static char *prefix_set_marker(char *value, gd_error *err)
+{
+    static const char marker[] = "(S) ";
+    size_t len = strlen(value);
+    char *grown = (char *)realloc(value, len + sizeof(marker));
+    if (grown == NULL) {
+        free(value);
+        gd_set_error(err, "out of memory");
+        return NULL;
+    }
+    memmove(grown + sizeof(marker) - 1, grown, len + 1);
+    memcpy(grown, marker, sizeof(marker) - 1);
+    return grown;
+}
+
 char *gd_recolor_text(const char *text, size_t length,
                       const gd_inference *inference, int rainbow,
-                      unsigned long *colored, size_t *out_length,
-                      gd_error *err)
+                      int full_rainbow, unsigned long *colored,
+                      size_t *out_length, gd_error *err)
 {
     size_t cap = length + 1, used = 0, start = 0;
     char *out = (char *)gd_alloc(cap, err);
@@ -439,6 +482,7 @@ char *gd_recolor_text(const char *text, size_t length,
         size_t end = start, body_end, eq;
         int has_line_ending;
         char *tag, *value, *changed = NULL;
+        const gd_tag *info;
         char color = 0;
         body_end = end;
         while (body_end < length && text[body_end] != '\r' &&
@@ -457,10 +501,17 @@ char *gd_recolor_text(const char *text, size_t length,
             if (tag == NULL || value == NULL) { free(tag); free(value); free(out); return NULL; }
             memcpy(tag, text+start, eq-start); tag[eq-start] = '\0';
             memcpy(value, text+eq+1, body_end-eq-1); value[body_end-eq-1] = '\0';
-            color = gd_tag_color(inference, tag); if (!color) color = gd_property_color(tag, rainbow);
+            info = gd_tag_lookup(inference, tag);
+            color = tag_color_of(info, full_rainbow);
+            if (!color) color = gd_property_color(tag, rainbow);
             if (color) changed = gd_apply_color(value, color, err);
             if (color && changed == NULL) {
                 free(tag); free(value); free(out); return NULL;
+            }
+            if (changed != NULL && full_rainbow && info != NULL &&
+                info->set_item) {
+                changed = prefix_set_marker(changed, err);
+                if (changed == NULL) { free(tag); free(value); free(out); return NULL; }
             }
             if (changed != NULL && strstr(tag, "Conversion") != NULL) {
                 size_t n = strlen(changed); char *grown = (char *)realloc(changed, n+5);

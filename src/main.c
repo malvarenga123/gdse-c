@@ -24,7 +24,7 @@ static void usage(FILE *stream)
 {
     fprintf(stream, "Usage: gdse [GRIM_DAWN_INSTALL_PATH]\n");
     fprintf(stream, "            [-l LANG|--language LANG] [-o PATH|--out PATH]\n");
-    fprintf(stream, "            [--no-rainbow-filter-damage-colors]\n");
+    fprintf(stream, "            [--no-rainbow-filter-damage-colors] [--full-rainbow]\n");
 }
 
 static int ends_with(const char *text, const char *suffix)
@@ -134,7 +134,8 @@ static int load_database(const char *install, const char *rel, int required,
 
 static int process_archive(const char *install, const char *rel, int required,
                            const char *stage, const gd_inference *inference,
-                           int rainbow, output_file **outputs, gd_error *err)
+                           int rainbow, int full_rainbow,
+                           output_file **outputs, gd_error *err)
 {
     char *path = gd_path_join(install, rel, err);
     gd_arc *arc;
@@ -157,7 +158,8 @@ static int process_archive(const char *install, const char *rel, int required,
         if (strstr(id, "tag") == NULL || !ends_with(id, ".txt")) { free(id); free(data); continue; }
         if (!gd_safe_record_path(id)) { gd_set_error(err, "unsafe archive path: %s", id); free(id); free(data); gd_arc_close(arc); return 0; }
         rewritten = gd_recolor_text((const char *)data, length, inference,
-                                    rainbow, &colored, &new_length, err);
+                                    rainbow, full_rainbow, &colored,
+                                    &new_length, err);
         free(data);
         if (rewritten == NULL) { free(id); gd_arc_close(arc); return 0; }
         if (colored == 0) { free(id); free(rewritten); continue; }
@@ -246,13 +248,14 @@ int main(int argc, char **argv)
         "gdx2/database/GDX2.arz", "gdx3/database/GDX3.arz"};
     const char *language = "en", *out_arg = NULL, *install = NULL;
     char lang[64], arc_rel[256], *out = NULL, *stage = NULL;
-    int rainbow = 1, i, ok = 0;
+    int rainbow = 1, full_rainbow = 0, i, ok = 0;
     gd_error err; gd_inference inference; output_file *outputs = NULL;
     err.message[0] = '\0';
     for (i = 1; i < argc; ++i) {
         if ((strcmp(argv[i], "-l") == 0 || strcmp(argv[i], "--language") == 0) && i+1 < argc) language=argv[++i];
         else if ((strcmp(argv[i], "-o") == 0 || strcmp(argv[i], "--out") == 0) && i+1 < argc) out_arg=argv[++i];
         else if (strcmp(argv[i], "--no-rainbow-filter-damage-colors") == 0) rainbow=0;
+        else if (strcmp(argv[i], "--full-rainbow") == 0) full_rainbow=1;
         else if (strcmp(argv[i], "--version") == 0) { puts("gdse 0.1.0-c89"); return 0; }
         else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) { usage(stdout); return 0; }
         else if (argv[i][0] != '-' && install == NULL) install=argv[i];
@@ -272,7 +275,7 @@ int main(int argc, char **argv)
     sprintf(stage,"%s.gdse-stage",out);
     if (gd_path_exists(stage)) { gd_set_error(&err,"staging path already exists: %s",stage); goto cleanup_inference; }
     if (!gd_mkdirs(stage,&err)) goto cleanup_inference;
-    for(i=0;i<4;++i){ const char *prefix=i==0?"":i==1?"gdx1/":i==2?"gdx2/":"gdx3/"; sprintf(arc_rel,"%sresources/Text_",prefix); { size_t n=strlen(arc_rel),j; for(j=0;lang[j];++j)arc_rel[n+j]=(char)toupper((unsigned char)lang[j]); strcpy(arc_rel+n+j,".arc"); } if(!process_archive(install,arc_rel,i==0,stage,&inference,rainbow,&outputs,&err))goto cleanup_inference; }
+    for(i=0;i<4;++i){ const char *prefix=i==0?"":i==1?"gdx1/":i==2?"gdx2/":"gdx3/"; sprintf(arc_rel,"%sresources/Text_",prefix); { size_t n=strlen(arc_rel),j; for(j=0;lang[j];++j)arc_rel[n+j]=(char)toupper((unsigned char)lang[j]); strcpy(arc_rel+n+j,".arc"); } if(!process_archive(install,arc_rel,i==0,stage,&inference,rainbow,full_rainbow,&outputs,&err))goto cleanup_inference; }
     if(!publish(out,stage,outputs,&err))goto cleanup_inference;
     ok=1;
 cleanup_inference:

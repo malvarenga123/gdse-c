@@ -27,6 +27,8 @@ typedef struct gd_tag {
     int faction;
     int gear;
     int item_present;
+    int set_item;
+    int name_part;
     struct gd_tag *next;
     struct gd_tag *hash_next;
 } gd_tag;
@@ -99,12 +101,14 @@ int gd_inference_add_part(gd_inference *inference, const char *part,
 int gd_infer_database(gd_inference *inference, gd_arz *db, gd_error *err);
 void gd_inference_finish(gd_inference *inference, gd_error *err);
 void gd_inference_free(gd_inference *inference);
-char gd_tag_color(const gd_inference *inference, const char *tag);
+const gd_tag *gd_tag_lookup(const gd_inference *inference, const char *name);
+char gd_tag_color(const gd_inference *inference, const char *tag,
+                  int full_rainbow);
 char gd_property_color(const char *tag, int rainbow);
 char *gd_apply_color(const char *value, char color, gd_error *err);
 char *gd_recolor_text(const char *text, size_t length,
                       const gd_inference *inference, int rainbow,
-                      unsigned long *colored, size_t *out_length,
-                      gd_error *err);
+                      int full_rainbow, unsigned long *colored,
+                      size_t *out_length, gd_error *err);
 
 #endif

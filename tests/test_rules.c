@@ -63,20 +63,20 @@ static void rewrite_cases(void)
     gd_inference_init(&inference);
     out=gd_recolor_text("DamageFire=Burn\r\ncomment\r\n",
                         strlen("DamageFire=Burn\r\ncomment\r\n"),
-                        &inference,0,&count,&length,&err);
+                        &inference,0,0,&count,&length,&err);
     expect_string("CRLF",out,"DamageFire={^O}Burn\r\ncomment\r\n");
     if(count!=1)++failures;
     free(out);
     out=gd_recolor_text("DamageFire=Burn\ncomment\rDamageCold=Cold\r\n",
                         strlen("DamageFire=Burn\ncomment\rDamageCold=Cold\r\n"),
-                        &inference,0,&count,&length,&err);
+                        &inference,0,0,&count,&length,&err);
     expect_string("normalize line endings",out,
                   "DamageFire={^O}Burn\r\ncomment\r\n"
                   "DamageCold={^C}Cold\r\n");
     if(count!=2)++failures;
     free(out);
     out=gd_recolor_text("DamageCold=Cold",strlen("DamageCold=Cold"),
-                        &inference,0,&count,&length,&err);
+                        &inference,0,0,&count,&length,&err);
     expect_string("no final newline",out,"DamageCold={^C}Cold"); free(out);
     gd_inference_free(&inference);
 }
@@ -95,9 +95,9 @@ static void inference_cases(void)
     if(!gd_inference_add_part(&inference,"cascade","style",&err))++failures;
     gd_inference_finish(&inference,&err);
     if(base->rarity!=GD_COMMON || !base->affixable)++failures;
-    if(gd_tag_color(&inference,"base")!='w')++failures;
-    if(gd_tag_color(&inference,"style")!='w')++failures;
-    if(gd_tag_color(&inference,"cascade")!=0)++failures;
+    if(gd_tag_color(&inference,"base",0)!='w')++failures;
+    if(gd_tag_color(&inference,"style",0)!='w')++failures;
+    if(gd_tag_color(&inference,"cascade",0)!=0)++failures;
     gd_inference_free(&inference);
 }
 
@@ -119,7 +119,7 @@ static void index_cases(void)
         ++failures;
     for(i=0;i<20000;++i) {
         sprintf(name,"synthetic-tag-%d",i);
-        if(gd_tag_color(&inference,name)!='g')++failures;
+        if(gd_tag_color(&inference,name,0)!='g')++failures;
     }
     for(i=0;i<20000;++i)
         if(!gd_inference_add_part(&inference,"shared-part","shared-base",&err))
@@ -131,10 +131,68 @@ static void index_cases(void)
     gd_inference_free(&inference);
 }
 
+/* --full-rainbow reproduces four Full Rainbow categories that gdse's own
+   scheme deliberately drops: Epic/Legendary names, the "(S) " set marker,
+   faction gear, and silver style/quality words. */
+static void full_rainbow_cases(void)
+{
+    gd_inference inference;
+    gd_error err;
+    gd_tag *t;
+    unsigned long count;
+    size_t length;
+    char *out;
+    gd_inference_init(&inference);
+
+    t=gd_inference_ensure_tag(&inference,"epic",&err);
+    t->kind=GD_ITEM; t->item_present=1; t->gear=1; ++t->counts[GD_EPIC];
+    t=gd_inference_ensure_tag(&inference,"legendary",&err);
+    t->kind=GD_ITEM; t->item_present=1; t->gear=1; ++t->counts[GD_LEGENDARY];
+    t=gd_inference_ensure_tag(&inference,"setpiece",&err);
+    t->kind=GD_ITEM; t->item_present=1; t->gear=1; t->set_item=1;
+    ++t->counts[GD_EPIC];
+    t=gd_inference_ensure_tag(&inference,"factiongear",&err);
+    t->kind=GD_ITEM; t->item_present=1; t->gear=1; t->faction=1;
+    ++t->counts[GD_RARE];
+    t=gd_inference_ensure_tag(&inference,"base",&err);
+    t->kind=GD_ITEM; t->item_present=1; t->gear=1; ++t->counts[GD_COMMON];
+    if(!gd_inference_add_part(&inference,"quality","base",&err))++failures;
+    gd_inference_finish(&inference,&err);
+
+    /* gdse's own scheme: Epic/Legendary, set pieces and faction gear are all
+       left to the engine, and a quality word takes the base's white. */
+    if(gd_tag_color(&inference,"epic",0)!=0)++failures;
+    if(gd_tag_color(&inference,"legendary",0)!=0)++failures;
+    if(gd_tag_color(&inference,"factiongear",0)!=0)++failures;
+    if(gd_tag_color(&inference,"quality",0)!='w')++failures;
+    /* Full Rainbow: every rarity colored, faction included, quality silver. */
+    if(gd_tag_color(&inference,"epic",1)!='b')++failures;
+    if(gd_tag_color(&inference,"legendary",1)!='i')++failures;
+    if(gd_tag_color(&inference,"factiongear",1)!='g')++failures;
+    if(gd_tag_color(&inference,"quality",1)!='s')++failures;
+    if(gd_tag_color(&inference,"base",1)!='w')++failures;
+
+    out=gd_recolor_text("setpiece=Explorer's Footpads\r\n",
+                        strlen("setpiece=Explorer's Footpads\r\n"),
+                        &inference,0,1,&count,&length,&err);
+    expect_string("set marker",out,"setpiece=(S) {^B}Explorer's Footpads\r\n");
+    if(count!=1)++failures;
+    free(out);
+    /* The marker is Full Rainbow's alone; gdse's own scheme never emits it. */
+    out=gd_recolor_text("setpiece=Explorer's Footpads\r\n",
+                        strlen("setpiece=Explorer's Footpads\r\n"),
+                        &inference,0,0,&count,&length,&err);
+    expect_string("no set marker by default",out,
+                  "setpiece=Explorer's Footpads\r\n");
+    if(count!=0)++failures;
+    free(out);
+    gd_inference_free(&inference);
+}
+
 int main(void)
 {
     apply_cases(); property_cases(); rewrite_cases(); inference_cases();
-    index_cases();
+    index_cases(); full_rainbow_cases();
     if(failures){fprintf(stderr,"%d tests failed\n",failures);return 1;}
     puts("all tests passed"); return 0;
 }

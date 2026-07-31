@@ -8,7 +8,7 @@
 - Clean: `make clean`.
 - MSYS2 MinGW build/test: `make` and `make test`; recipes follow the active POSIX shell even though `OS=Windows_NT`.
 - MinGW32 build/test: `mingw32-make` and `mingw32-make test` (produces `gdse.exe`). Cross-compile check: `make clean && make CC=i686-w64-mingw32-gcc EXE=.exe all`.
-- Run from the game directory: `./gdse [--language LANG] [--out PATH] [--no-rainbow-filter-damage-colors]`; alternatively pass `/path/to/game` as the optional first positional argument. The language defaults to `en`, and Rainbow Filter damage colors default to enabled.
+- Run from the game directory: `./gdse [--language LANG] [--out PATH] [--no-rainbow-filter-damage-colors] [--full-rainbow]`; alternatively pass `/path/to/game` as the optional first positional argument. The language defaults to `en`, and Rainbow Filter damage colors default to enabled. `--full-rainbow` additionally colors Epic/Legendary and faction names, marks set items with `(S) `, and paints style/quality words silver.
 - Project sources compile with `-std=c89 -pedantic -Wall -Wextra -Werror`. Vendored upstream sources compile with their supported dialect and are isolated behind project-owned interfaces.
 
 ## Architecture and map

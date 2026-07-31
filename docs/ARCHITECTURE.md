@@ -20,7 +20,7 @@ flowchart LR
 
 - `src/main.c` is the composition root. It parses options, enforces mandatory/optional input policy, stages a complete output set, lets a later archive replace an earlier staged destination, writes the ownership manifest, and publishes with backup/rollback.
 - `src/archive.c` implements the required version-3 `.arz` and `.arc` readers. It validates sizes and indexes, uses vendored LZ4 for payloads, and resolves one record at a time rather than collecting raw/resolved record vectors.
-- `src/rules.c` accumulates inference state in dynamically resized hash indexes, deduplicates identical part/base relationships, resolves modal rarity ties toward the lower tier, maps property tags, preserves Unicode alphabetic handling through utf8proc, and rewrites localization lines.
+- `src/rules.c` accumulates inference state in dynamically resized hash indexes, deduplicates identical part/base relationships, resolves modal rarity ties toward the lower tier, maps property tags, preserves Unicode alphabetic handling through utf8proc, and rewrites localization lines. It carries two item color models: gdse's own, which colors only names that can take a name-altering affix, and `--full-rainbow`, which colors every modeled rarity, marks set items, includes faction gear, and paints style/quality words silver.
 - `src/util.c` contains checked allocation, little-endian reads, directory creation, joins, and archive-path containment checks.
 - `src/gdse.h` is an internal interface; this executable exposes no supported library ABI.
 - `vendor/lz4` and `vendor/utf8proc` are isolated third-party implementations with included licenses.
@@ -28,7 +28,7 @@ flowchart LR
 
 ## Control and data flow
 
-1. The CLI parses the optional positional `GRIM_DAWN_INSTALL_PATH` and remaining options; it defaults the install path to the current directory, the language to English, and Rainbow Filter damage colors to enabled, then validates the selected directory and its mandatory inputs.
+1. The CLI parses the optional positional `GRIM_DAWN_INSTALL_PATH` and remaining options; it defaults the install path to the current directory, the language to English, Rainbow Filter damage colors to enabled, and the wider Rainbow Filter item scheme (`--full-rainbow`) to disabled, then validates the selected directory and its mandatory inputs.
 2. The base database is mandatory. DLC databases are skipped only if absent; malformed or unreadable existing databases fail the run.
 3. ARZ record offsets and the string table are indexed once. Relevant item records are decompressed individually and folded into hash-indexed inference state, bounding transient payload memory to one record while keeping tag insertion and lookup amortized constant-time.
 4. The base requested-language ARC is mandatory. DLC archives follow the same absent-versus-broken policy.
@@ -39,6 +39,7 @@ flowchart LR
 ## Compatibility and limitations
 
 - Inline color markers retain the four-byte `{^X}` format and the Rust implementation's placement ordering.
+- `--full-rainbow` derives every category it covers from `records/items/` fields already read (`itemClassification`, `itemSetName`, the faction record path, and the style/quality tag fields); it carries no per-item table. Rainbow Filter's Monster Infrequent color is excluded because that distinction is not present in those fields.
 - Supported ARZ and ARC format version is 3, matching the former `lib_gddb` dependency.
 - Full-directory atomic replacement is intentionally avoided because output may coexist with unrelated files. Individual renames are atomic where the filesystem provides that guarantee; the backup rollback protects multi-file publication failures on a best-effort basis.
 - Real game archives, Windows behavior, non-English archives, and crash injection during filesystem publication remain unverified in this checkout.
