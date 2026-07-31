@@ -24,7 +24,7 @@ static void usage(FILE *stream)
 {
     fprintf(stream, "Usage: gdse [GRIM_DAWN_INSTALL_PATH]\n");
     fprintf(stream, "            [-l LANG|--language LANG] [-o PATH|--out PATH]\n");
-    fprintf(stream, "            [--rainbow-filter-damage-colors]\n");
+    fprintf(stream, "            [--no-rainbow-filter-damage-colors]\n");
 }
 
 static int ends_with(const char *text, const char *suffix)
@@ -246,13 +246,13 @@ int main(int argc, char **argv)
         "gdx2/database/GDX2.arz", "gdx3/database/GDX3.arz"};
     const char *language = "en", *out_arg = NULL, *install = NULL;
     char lang[64], arc_rel[256], *out = NULL, *stage = NULL;
-    int rainbow = 0, i, ok = 0;
+    int rainbow = 1, i, ok = 0;
     gd_error err; gd_inference inference; output_file *outputs = NULL;
     err.message[0] = '\0';
     for (i = 1; i < argc; ++i) {
         if ((strcmp(argv[i], "-l") == 0 || strcmp(argv[i], "--language") == 0) && i+1 < argc) language=argv[++i];
         else if ((strcmp(argv[i], "-o") == 0 || strcmp(argv[i], "--out") == 0) && i+1 < argc) out_arg=argv[++i];
-        else if (strcmp(argv[i], "--rainbow-filter-damage-colors") == 0) rainbow=1;
+        else if (strcmp(argv[i], "--no-rainbow-filter-damage-colors") == 0) rainbow=0;
         else if (strcmp(argv[i], "--version") == 0) { puts("gdse 0.1.0-c89"); return 0; }
         else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) { usage(stdout); return 0; }
         else if (argv[i][0] != '-' && install == NULL) install=argv[i];
