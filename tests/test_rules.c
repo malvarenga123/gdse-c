@@ -245,6 +245,39 @@ static void monster_infrequent_cases(void)
     if(!add_loot_entry_for_test(&inference,"records/items/loottables/t_yeti.dbr",
                                 "records/items/w/club.dbr",&err))++failures;
 
+    /* Nested tables: the creature names lt_nested, which holds tdyn_nested,
+       which holds tdyn_deep, which finally holds the item. Alongside it sits a
+       master table, which must not be dragged in by the nesting. */
+    t=gd_inference_ensure_tag(&inference,"tagNestedClaw",&err);
+    t->kind=GD_ITEM; t->item_present=1; t->gear=1; ++t->counts[GD_EPIC];
+    if(!add_item_path_for_test(&inference,"records/items/w/nested.dbr",
+                               "tagNestedClaw",&err))++failures;
+    t=gd_inference_ensure_tag(&inference,"tagWorldRare",&err);
+    t->kind=GD_ITEM; t->item_present=1; t->gear=1; ++t->counts[GD_RARE];
+    if(!add_item_path_for_test(&inference,"records/items/w/world.dbr",
+                               "tagWorldRare",&err))++failures;
+    if(!add_loot_entry_for_test(&inference,
+                                "records/items/loottables/tdyn_deep.dbr",
+                                "records/items/w/nested.dbr",&err))++failures;
+    if(!add_loot_entry_for_test(&inference,
+                                "records/items/loottables/tdyn_nested.dbr",
+                                "records/items/loottables/tdyn_deep.dbr",
+                                &err))++failures;
+    if(!add_loot_entry_for_test(&inference,
+                                "records/items/loottables/mastertables/mt_all.dbr",
+                                "records/items/w/world.dbr",&err))++failures;
+    if(!add_loot_entry_for_test(&inference,
+                                "records/items/loottables/lt_nested.dbr",
+                                "records/items/loottables/tdyn_nested.dbr",
+                                &err))++failures;
+    if(!add_loot_entry_for_test(&inference,
+                                "records/items/loottables/lt_nested.dbr",
+                                "records/items/loottables/mastertables/mt_all.dbr",
+                                &err))++failures;
+    table=ensure_loot_table_for_test(&inference,
+                                     "records/items/loottables/lt_nested.dbr",&err);
+    if(table==NULL)++failures; else table->monster_drop=1;
+
     gd_inference_finish(&inference,&err);
 
     if(gd_tag_color(&inference,"tagYetiHorn",1)!='l')++failures;
@@ -253,6 +286,10 @@ static void monster_infrequent_cases(void)
     if(gd_tag_color(&inference,"tagSabre",1)!='w')++failures;
     /* In a monster's own table, but Common: still an ordinary base. */
     if(gd_tag_color(&inference,"tagWieldedClub",1)!='w')++failures;
+    /* Two table hops from the creature's own table: still an Infrequent. */
+    if(gd_tag_color(&inference,"tagNestedClaw",1)!='z')++failures;
+    /* Behind a master table the nesting must not follow: an ordinary Rare. */
+    if(gd_tag_color(&inference,"tagWorldRare",1)!='g')++failures;
     /* gdse's own scheme never emits MI colors. */
     if(gd_tag_color(&inference,"tagYetiHorn",0)!='g')++failures;
     if(gd_tag_color(&inference,"tagBossBlade",0)!=0)++failures;

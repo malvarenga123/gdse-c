@@ -504,6 +504,31 @@ void gd_inference_finish(gd_inference *inference, gd_error *err)
         tag->affixable = tag->gear && !tag->faction && best >= 0 && best <= GD_RARE;
         tag->set_item = tag->set_records * 2 > tag->name_records;
     }
+    /* Loot tables nest. A creature names an lt_ table whose entries are further
+       tdyn_ tables holding the actual items, and the items behind that wrapper
+       are Infrequents just the same: Alkamos reaches Soulrend through
+       lt_melee2h_d02_alkamos -> tdyn_melee2h_d02_alkamos, and ghosts reach the
+       Spectral Longsword through lt_sword1h_ghostly -> tdyn_sword1h_b02_ghostly.
+       Spread the mark to a fixed point before resolving items. Master tables
+       stay excluded here as well, or one nested reference would drag in the
+       shared world-drop pool the creature-level check exists to keep out. */
+    for (;;) {
+        int changed = 0;
+        for (table = inference->loot_tables; table != NULL; table = table->next) {
+            gd_loot_entry *entry;
+            if (!table->monster_drop) continue;
+            for (entry = table->entries; entry != NULL; entry = entry->next) {
+                gd_loot_table *nested =
+                    find_loot_table(inference, entry->item_path);
+                if (nested == NULL || nested->monster_drop) continue;
+                if (strstr(entry->item_path,
+                           "/loottables/mastertables/") != NULL) continue;
+                nested->monster_drop = 1;
+                changed = 1;
+            }
+        }
+        if (!changed) break;
+    }
     /* Every item in a table a monster names in its own drop slots is a Monster
        Infrequent. The table may be read before or after the creature naming it,
        so this resolves once both passes are complete. */
