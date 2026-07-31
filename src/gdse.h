@@ -136,6 +136,10 @@ int add_loot_entry_for_test(gd_inference *inference, const char *table_path,
                             const char *item_path, gd_error *err);
 gd_loot_table *ensure_loot_table_for_test(gd_inference *inference,
                                           const char *path, gd_error *err);
+gd_loot_table *find_loot_table_for_test(const gd_inference *inference,
+                                        const char *path);
+int scan_loot_table_for_test(gd_inference *inference, const gd_record *record,
+                             gd_error *err);
 gd_tag *gd_inference_ensure_tag(gd_inference *inference, const char *name,
                                 gd_error *err);
 int gd_inference_add_part(gd_inference *inference, const char *part,

@@ -277,6 +277,26 @@ static void monster_infrequent_cases(void)
     table=ensure_loot_table_for_test(&inference,
                                      "records/items/loottables/lt_nested.dbr",&err);
     if(table==NULL)++failures; else table->monster_drop=1;
+    /* A LevelTable names its children in one semicolon-separated field. */
+    {
+        gd_record rec;
+        gd_field f;
+        f.key="records";
+        f.value="records/items/loottables/tdyn_lvl_a.dbr;"
+                "records/items/loottables/tdyn_lvl_b.dbr";
+        f.next=NULL;
+        rec.id="records/items/loottables/lt_level.dbr";
+        rec.fields=&f;
+        if(!scan_loot_table_for_test(&inference,&rec,&err))++failures;
+        table=find_loot_table_for_test(&inference,
+                                       "records/items/loottables/lt_level.dbr");
+        if(table==NULL||table->entries==NULL||table->entries->next==NULL||
+           table->entries->next->next!=NULL)++failures;
+        else if(strcmp(table->entries->next->item_path,
+                       "records/items/loottables/tdyn_lvl_a.dbr")!=0||
+                strcmp(table->entries->item_path,
+                       "records/items/loottables/tdyn_lvl_b.dbr")!=0)++failures;
+    }
 
     gd_inference_finish(&inference,&err);
 

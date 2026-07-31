@@ -336,27 +336,54 @@ static gd_loot_table *ensure_loot_table(gd_inference *inference,
     return table;
 }
 
-static int add_loot_entry(gd_inference *inference, const char *table_path,
-                          const char *item_path, gd_error *err)
+static int add_loot_entry_len(gd_inference *inference, const char *table_path,
+                              const char *item_path, size_t len, gd_error *err)
 {
     gd_loot_table *table = ensure_loot_table(inference, table_path, err);
     gd_loot_entry *entry;
     if (table == NULL) return 0;
     entry = (gd_loot_entry *)gd_alloc(sizeof(*entry), err);
     if (entry == NULL) return 0;
-    entry->item_path = gd_strdup(item_path, err);
+    entry->item_path = (char *)gd_alloc(len + 1, err);
     if (entry->item_path == NULL) { free(entry); return 0; }
+    memcpy(entry->item_path, item_path, len);
+    entry->item_path[len] = '\0';
     entry->next = table->entries;
     table->entries = entry;
     return 1;
 }
 
-/* lootName1..N name the records a table can yield. */
+static int add_loot_entry(gd_inference *inference, const char *table_path,
+                          const char *item_path, gd_error *err)
+{
+    return add_loot_entry_len(inference, table_path, item_path,
+                              strlen(item_path), err);
+}
+
+/* Two record shapes name a table's contents, and only one of them is a loot
+   table in the LootItemTable sense. lootName1..N name the records a weighted
+   table can yield. A LevelTable instead selects among whole tables by character
+   level, and lists them in one semicolon-separated `records` field -- which is
+   how Alkamos reaches Soulrend, through lt_melee2h_d02_alkamos. Reading only
+   lootName left every such wrapper looking empty. */
 static int scan_loot_table(gd_inference *inference, const gd_record *record,
                            gd_error *err)
 {
     const gd_field *field;
     for (field = record->fields; field != NULL; field = field->next) {
+        if (strcmp(field->key, "records") == 0) {
+            const char *start = field->value;
+            for (;;) {
+                const char *stop = strchr(start, ';');
+                size_t len = stop == NULL ? strlen(start) : (size_t)(stop - start);
+                if (len > 0 &&
+                    !add_loot_entry_len(inference, record->id, start, len, err))
+                    return 0;
+                if (stop == NULL) break;
+                start = stop + 1;
+            }
+            continue;
+        }
         if (!starts(field->key, "lootName")) continue;
         if (*field->value == '\0') continue;
         if (!add_loot_entry(inference, record->id, field->value, err)) return 0;
@@ -413,6 +440,18 @@ gd_loot_table *ensure_loot_table_for_test(gd_inference *inference,
                                           const char *path, gd_error *err)
 {
     return ensure_loot_table(inference, path, err);
+}
+
+gd_loot_table *find_loot_table_for_test(const gd_inference *inference,
+                                        const char *path)
+{
+    return find_loot_table(inference, path);
+}
+
+int scan_loot_table_for_test(gd_inference *inference, const gd_record *record,
+                             gd_error *err)
+{
+    return scan_loot_table(inference, record, err);
 }
 
 int gd_infer_database(gd_inference *inference, gd_arz *db, gd_error *err)
