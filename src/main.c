@@ -182,7 +182,7 @@ static int publish(const char *out, const char *stage, output_file *outputs,
     if (manifest == NULL || stage_manifest == NULL) goto fail;
     mf = fopen(stage_manifest, "wb");
     if (mf == NULL) { gd_set_error(err, "could not create output manifest"); goto fail; }
-    for (file = outputs; file != NULL; file = file->next) fprintf(mf, "%s\n", file->name);
+    for (file = outputs; file != NULL; file = file->next) fprintf(mf, "%s\r\n", file->name);
     if (fclose(mf) != 0) { gd_set_error(err, "could not finish output manifest"); goto fail; }
     if (!gd_mkdirs(out, err)) goto fail;
     mf = fopen(manifest, "rb");

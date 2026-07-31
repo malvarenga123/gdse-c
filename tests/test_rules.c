@@ -67,6 +67,14 @@ static void rewrite_cases(void)
     expect_string("CRLF",out,"DamageFire={^O}Burn\r\ncomment\r\n");
     if(count!=1)++failures;
     free(out);
+    out=gd_recolor_text("DamageFire=Burn\ncomment\rDamageCold=Cold\r\n",
+                        strlen("DamageFire=Burn\ncomment\rDamageCold=Cold\r\n"),
+                        &inference,0,&count,&length,&err);
+    expect_string("normalize line endings",out,
+                  "DamageFire={^O}Burn\r\ncomment\r\n"
+                  "DamageCold={^C}Cold\r\n");
+    if(count!=2)++failures;
+    free(out);
     out=gd_recolor_text("DamageCold=Cold",strlen("DamageCold=Cold"),
                         &inference,0,&count,&length,&err);
     expect_string("no final newline",out,"DamageCold={^C}Cold"); free(out);
