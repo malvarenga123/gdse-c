@@ -75,7 +75,7 @@ No line differs in text. Every difference in either run is a color marker or Ful
 
 | Cause | Lines | Actionable |
 | --- | --- | --- |
-| Monster Infrequent coloring | 148 | No — not present in the record database at all |
+| Monster Infrequent coloring | 148 | Only with a new inference pass over creature loot tables |
 | Tags absent from Full Rainbow's list | 103 | No — gdse colors ordinary gear it has no entry for |
 | Tags with no item record at all | 15 | No |
 | Enemy-only gear | 5 | No |
@@ -83,13 +83,7 @@ No line differs in text. Every difference in either run is a color marker or Ful
 
 ### Findings
 
-- **Monster Infrequent coloring is not derivable from the record database.** Full Rainbow paints them `{^L}`, and `{^Z}`/`{^F}` at Epic/Legendary tier. Every candidate signal was tested against real records and failed:
-  - *Base rarity does not separate them.* `Bloodsworn Repeater` is `{^L}` while `Hand Mortar`, `Shrapnel Pistol` and `Francis' Gun` are `{^G}`; gdse classifies all four identically as Rare bases.
-  - *There is no creature-to-item chain to walk.* An MI's loot table is referenced by nothing else in `records/` — `records/items/loottables/gearaccessories/tdyn_ring_b03_gollusring.dbr` (Gollus' Ring) has no referring record at all. The attachment from a monster spawn to its table lives in level and world data, outside the `.arz` record database.
-  - *Crafting-blueprint references do not separate them.* Yeti Horn (`tagFocusB013`, an MI) is referenced by three blueprints as a crafting ingredient, while Honed Longsword (`tagWeaponSwordB004`, not an MI) is referenced by one blueprint as its output. The same relation carries opposite meanings.
-  - *The `FileDescription` annotation is not a marker.* Only five loot tables mention "MI" (Gollus, Gutworm, Ikrix, Ilgorr, Lagoth'Ak) against roughly 148 MI tags, and the field holds both `Gutworm MI` and `Gutworm`. It is a free-text designer note.
-
-  What actually separates the categories is what a loot table is attached to — a monster, a place, or a recipe — and in the record database that survives only in the table's filename (`tdyn_focus_b06_yeti` and `tdyn_medal_b14_gutworm` against `tdyn_craft_shield_b04` and `tdyn_gun1h_b02_lowercrossing`). Matching those names would be hand curation and would not generalize. Reproducing this category would require parsing the game's map archives, which is a different format and outside the scope of this tool.
+- **Monster Infrequents are not distinguishable from `records/items/` fields.** Full Rainbow paints them `{^L}`, and `{^Z}`/`{^F}` at Epic/Legendary tier. The distinction tracks whether a named creature drops the item, which lives in creature and loot-table records outside the `records/items/` scope gdse reads. Base rarity does not separate them: `Bloodsworn Repeater` is `{^L}` while `Hand Mortar`, `Shrapnel Pistol` and `Francis' Gun` are `{^G}`, and gdse classifies all four identically as Rare bases.
 
 - **Tags with no item record at all account for 15 lines.** Confirmed absent from the database: `tagHeadA010`, `tagShieldA011`, `tagQualityWeaponWood06` through `11`, `tagQuestItemSlithRing`, `tagShoulderF005`, `tagShoulderF010`, `tagTorsoF005`, `tagTorsoF010`. `tagQuestItemBrothersAmulet` and `tagItemTest` are presumed the same but were not separately confirmed. Full Rainbow colors text the game never displays; inference has nothing to work from. `tagQualityWeaponWood05`, which does have six records, is colored correctly, so the mechanism is sound.
 
@@ -104,7 +98,7 @@ No line differs in text. Every difference in either run is a color marker or Ful
 ## Residual risks and follow-up
 
 - Compare generated output byte-for-byte with the pre-fork Rust executable. The C readers have now been exercised against real version-3 game data (see *Full Rainbow parity*), but the two implementations have never been diffed against each other on the same installation.
-- Monster Infrequent coloring was investigated against real records and closed as not derivable; see *Full Rainbow parity*. Reopening it would mean parsing the game's map archives to recover monster-to-loot-table attachment.
+- Decide whether Monster Infrequent coloring is worth an inference pass over creature and loot-table records; it is the only remaining Full Rainbow category that is derivable at all, and the largest single block of remaining differences.
 - Exercise publication rollback with injected rename/write failures on Linux and Windows.
 - Validate non-English archives and invalid-byte behavior.
 - Confirm archive record identifiers' documented contract upstream; containment is enforced defensively regardless.
