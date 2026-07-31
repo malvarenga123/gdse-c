@@ -6,11 +6,19 @@ C89FLAGS = -std=c89 -pedantic -Wall -Wextra -Werror
 
 ifeq ($(OS),Windows_NT)
 EXE = .exe
+else
+EXE =
+endif
+
+ifneq ($(findstring sh,$(notdir $(SHELL))),)
+MKDIR_BUILD = mkdir -p build
+CLEAN = rm -rf gdse gdse.exe tests/test_rules tests/test_rules.exe build
+RUN_TEST = ./tests/test_rules$(EXE)
+else ifeq ($(OS),Windows_NT)
 MKDIR_BUILD = if not exist build mkdir build
 CLEAN = if exist gdse.exe del /Q gdse.exe & if exist tests\test_rules.exe del /Q tests\test_rules.exe & if exist build rmdir /S /Q build
 RUN_TEST = tests\test_rules.exe
 else
-EXE =
 MKDIR_BUILD = mkdir -p build
 CLEAN = rm -rf gdse tests/test_rules build
 RUN_TEST = ./tests/test_rules

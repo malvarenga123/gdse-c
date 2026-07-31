@@ -437,13 +437,19 @@ char *gd_recolor_text(const char *text, size_t length,
     *colored = 0;
     while (start < length) {
         size_t end = start, body_end, eq;
+        int has_line_ending;
         char *tag, *value, *changed = NULL;
         char color = 0;
-        while (end < length && text[end] != '\n') ++end;
-        if (end < length) ++end;
         body_end = end;
-        if (body_end > start && text[body_end-1] == '\n') --body_end;
-        if (body_end > start && text[body_end-1] == '\r') --body_end;
+        while (body_end < length && text[body_end] != '\r' &&
+               text[body_end] != '\n') ++body_end;
+        end = body_end;
+        has_line_ending = end < length;
+        if (has_line_ending) {
+            if (text[end] == '\r' && end + 1 < length &&
+                text[end + 1] == '\n') end += 2;
+            else ++end;
+        }
         eq = start; while (eq < body_end && text[eq] != '=') ++eq;
         if (eq < body_end) {
             tag = (char *)gd_alloc(eq-start+1, err);
@@ -462,17 +468,21 @@ char *gd_recolor_text(const char *text, size_t length,
                 changed = grown; strcpy(changed+n, "{^E}");
             }
             if (changed != NULL && strcmp(changed, value) != 0) {
-                size_t need = strlen(tag)+1+strlen(changed)+(end-body_end);
+                size_t need = strlen(tag)+1+strlen(changed)+
+                              (has_line_ending ? 2 : 0);
                 if (used+need+1 > cap) { char *grown; cap=(used+need+1)*2; grown=(char *)realloc(out,cap); if(!grown){free(tag);free(value);free(changed);free(out);gd_set_error(err,"out of memory");return NULL;} out=grown; }
                 memcpy(out+used,tag,strlen(tag)); used+=strlen(tag); out[used++]='=';
                 memcpy(out+used,changed,strlen(changed)); used+=strlen(changed);
-                memcpy(out+used,text+body_end,end-body_end); used+=end-body_end; ++*colored;
+                if (has_line_ending) { out[used++]='\r'; out[used++]='\n'; }
+                ++*colored;
                 free(tag); free(value); free(changed); start=end; continue;
             }
             free(tag); free(value); free(changed);
         }
-        if (used+(end-start)+1 > cap) { char *grown; cap=(used+end-start+1)*2; grown=(char *)realloc(out,cap); if(!grown){free(out);gd_set_error(err,"out of memory");return NULL;} out=grown; }
-        memcpy(out+used,text+start,end-start); used+=end-start; start=end;
+        if (used+(body_end-start)+(has_line_ending ? 2 : 0)+1 > cap) { char *grown; cap=(used+body_end-start+(has_line_ending ? 2 : 0)+1)*2; grown=(char *)realloc(out,cap); if(!grown){free(out);gd_set_error(err,"out of memory");return NULL;} out=grown; }
+        memcpy(out+used,text+start,body_end-start); used+=body_end-start;
+        if (has_line_ending) { out[used++]='\r'; out[used++]='\n'; }
+        start=end;
     }
     out[used]='\0'; *out_length=used; return out;
 }

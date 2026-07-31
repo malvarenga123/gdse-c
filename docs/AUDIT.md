@@ -18,13 +18,14 @@
 | `./gdse` | Exit 2 as designed; the mandatory install-path argument is diagnosed. |
 | `./gdse /nonexistent` | Exit 1 as designed; invalid install paths are diagnosed. |
 | `make clean && make CC=i686-w64-mingw32-gcc EXE=.exe all` | Exit 0; produces a 32-bit Windows executable with strict C89 diagnostics on project sources. |
+| `make OS=Windows_NT SHELL=/bin/sh clean build` | Exit 0; the MSYS2-style environment selects POSIX recipes while retaining `.exe` targets. |
 
 ## AUD-001 — Core transformation and inference behavior has no automated tests
 
 - **Status:** Resolved
 - **Classification:** Observed
 - **Original severity:** High
-- **Resolution:** `tests/test_rules.c` adds table-driven coverage for all color-placement branches, replacement/placeholder ordering, property exclusions and palette selection, Unicode letters, CRLF and no-final-newline preservation, conversion behavior, rarity ties, affixability, and name-part coloring. The Make `check` target compiles and runs the suite.
+- **Resolution:** `tests/test_rules.c` adds table-driven coverage for all color-placement branches, replacement/placeholder ordering, property exclusions and palette selection, Unicode letters, CRLF normalization and no-final-newline preservation, conversion behavior, rarity ties, affixability, and name-part coloring. The Make `check` target compiles and runs the suite.
 - **Evidence:** `src/rules.c`, `tests/test_rules.c`, `Makefile`; `make clean && make check` exits 0.
 - **Remaining limitation:** No proprietary fixture was vendored. ARZ/ARC parsing and complete game output still require a licensed manual smoke test.
 

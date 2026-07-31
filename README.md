@@ -15,7 +15,14 @@ The application is written to ISO C89. LZ4 and utf8proc are vendored under `vend
 
 ### Windows / MinGW32
 
-From a MinGW shell or with `mingw32-make` available on `PATH`:
+From an MSYS2 MinGW shell, use its POSIX `make` normally:
+
+```sh
+make
+make test
+```
+
+With native `mingw32-make` available on `PATH`, use:
 
 ```bat
 mingw32-make
@@ -36,3 +43,5 @@ The build produces `gdse.exe`. Windows-specific filesystem and 64-bit seek calls
 gdse stages all generated files before publication, rejects unsafe/colliding archive paths, and records owned output in `.gdse-manifest`. Later runs remove only stale files named by that manifest, leaving unrelated files alone. Existing generated files are backed up during publication and restored if publication fails.
 
 Re-run gdse after game patches. It has only been verified against the repository's synthetic tests; a licensed Grim Dawn installation is needed for an end-to-end smoke test. The output is not compatible with other mods that rewrite the same game text.
+
+Generated localization files and the ownership manifest use Windows CRLF line endings. An input file without a final newline remains unterminated after rewriting.
