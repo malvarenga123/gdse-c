@@ -364,13 +364,17 @@ static int scan_loot_table(gd_inference *inference, const gd_record *record,
     return 1;
 }
 
-/* A monster's lootMisc<N>Item<M> fields are its own drop slots, as distinct
-   from the loot<Slot>Item<M> fields that hold the gear it wields. Full Rainbow
-   treats exactly the former as Monster Infrequent sources. Master tables are
-   the shared world-drop pools every monster rolls from, so they are excluded;
-   what is left is the table attached to this monster in particular. Pets and
-   other non-monster actors never reach here: they are Class Pet and live
-   outside records/creatures/. */
+/* A monster names its loot in loot<Slot>Item<M> fields, covering both the misc
+   drop slots and the equipment slots -- which slot an item uses says nothing
+   about what it is. A yeti carries its Monster Infrequent in lootMisc3Item1,
+   while the troll that drops Gollus' Ring carries it in lootFinger1Item1 and
+   has nothing but master tables in its misc slots.
+   Master tables are the shared world-drop pools every monster rolls from, so
+   they are excluded; what is left is the table attached to this monster in
+   particular, and every item in it is a Monster Infrequent. Values naming an
+   item record rather than a table land as an empty table and mark nothing.
+   Pets and other non-monster actors never reach here: they are Class Pet and
+   live outside records/creatures/. */
 static int scan_creature(gd_inference *inference, const gd_record *record,
                          gd_error *err)
 {
@@ -379,7 +383,8 @@ static int scan_creature(gd_inference *inference, const gd_record *record,
     if (class_name == NULL || !starts(class_name, "Monster")) return 1;
     for (field = record->fields; field != NULL; field = field->next) {
         gd_loot_table *table;
-        if (!starts(field->key, "lootMisc")) continue;
+        if (!starts(field->key, "loot") ||
+            strstr(field->key, "Item") == NULL) continue;
         if (*field->value == '\0') continue;
         if (strstr(field->value, "/loottables/mastertables/") != NULL) continue;
         table = ensure_loot_table(inference, field->value, err);
