@@ -3,8 +3,8 @@
 ## Audit record
 
 - **Original audit:** 2026-07-30 at Rust commit `b0a9042cbba84d3681cb993b3015e645c17ff4f3`.
-- **C89 remediation:** branch `c89-port`, based on `0e8706c0bb453767c585fe9f9596f4836f839ee4`.
-- **Synchronization limitation:** no `origin`, upstream, or remote default branch is configured. Fetch/rebase and upstream comparison remain impossible.
+- **C89 remediation:** branch `c89`, based on `0e8706c0bb453767c585fe9f9596f4836f839ee4`.
+- **Upstream reference:** `origin` is configured, and the pre-fork Rust implementation remains available on the `mainline` branch. Comparing C behavior against that reference is the expected way to validate port parity.
 - **Scope:** The Rust/Cargo implementation was replaced by an ISO C89 application, focused tests, Make build, vendored LZ4/utf8proc, and updated durable guidance.
 - **Unvalidated:** Proprietary Grim Dawn data, real end-to-end output, Windows, non-English archives, crash injection, and representative performance measurements.
 
