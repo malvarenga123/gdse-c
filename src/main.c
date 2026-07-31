@@ -22,7 +22,7 @@ typedef struct output_file {
 
 static void usage(FILE *stream)
 {
-    fprintf(stream, "Usage: gdse GRIM_DAWN_INSTALL_PATH\n");
+    fprintf(stream, "Usage: gdse [GRIM_DAWN_INSTALL_PATH]\n");
     fprintf(stream, "            [-l LANG|--language LANG] [-o PATH|--out PATH]\n");
     fprintf(stream, "            [--rainbow-filter-damage-colors]\n");
 }
@@ -258,20 +258,20 @@ int main(int argc, char **argv)
         else if (argv[i][0] != '-' && install == NULL) install=argv[i];
         else { usage(stderr); return 2; }
     }
-    if (install == NULL) { fprintf(stderr,"GRIM_DAWN_INSTALL_PATH argument is required\n"); usage(stderr); return 2; }
+    if (install == NULL) install = ".";
     if (strlen(language) >= sizeof(lang)) { fprintf(stderr,"language is too long\n"); return 2; }
     strcpy(lang, language); for (i=0; lang[i]; ++i) lang[i]=(char)tolower((unsigned char)lang[i]);
     if (!gd_is_directory(install)) { fprintf(stderr,"GRIM_DAWN_INSTALL_PATH must name an existing directory: %s\n",install); return 1; }
     if (out_arg != NULL) out=gd_strdup(out_arg,&err);
     else { char settings[128]; sprintf(settings,"settings/text_%s",lang); out=gd_path_join(install,settings,&err); }
     if (out == NULL) goto done;
-    stage=(char *)gd_alloc(strlen(out)+20,&err); if(stage==NULL)goto done;
-    sprintf(stage,"%s.gdse-stage",out);
-    if (gd_path_exists(stage)) { gd_set_error(&err,"staging path already exists: %s",stage); goto done; }
-    if (!gd_mkdirs(stage,&err)) goto done;
     gd_inference_init(&inference);
     for(i=0;i<4;++i) if(!load_database(install,dbs[i],i==0,&inference,&err))goto cleanup_inference;
     gd_inference_finish(&inference,&err); if(err.message[0])goto cleanup_inference;
+    stage=(char *)gd_alloc(strlen(out)+20,&err); if(stage==NULL)goto cleanup_inference;
+    sprintf(stage,"%s.gdse-stage",out);
+    if (gd_path_exists(stage)) { gd_set_error(&err,"staging path already exists: %s",stage); goto cleanup_inference; }
+    if (!gd_mkdirs(stage,&err)) goto cleanup_inference;
     for(i=0;i<4;++i){ const char *prefix=i==0?"":i==1?"gdx1/":i==2?"gdx2/":"gdx3/"; sprintf(arc_rel,"%sresources/Text_",prefix); { size_t n=strlen(arc_rel),j; for(j=0;lang[j];++j)arc_rel[n+j]=(char)toupper((unsigned char)lang[j]); strcpy(arc_rel+n+j,".arc"); } if(!process_archive(install,arc_rel,i==0,stage,&inference,rainbow,&outputs,&err))goto cleanup_inference; }
     if(!publish(out,stage,outputs,&err))goto cleanup_inference;
     ok=1;

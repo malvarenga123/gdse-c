@@ -21,8 +21,9 @@ unless the repository documents a different versioning policy.
 
 - Replaced the Rust/Cargo implementation and build workflow with the ISO C89
   application and Make workflow.
-- Made the Grim Dawn installation path a required positional argument instead
-  of reading `GRIM_DAWN_INSTALL_PATH` from the environment.
+- Made the optional Grim Dawn installation path a positional argument instead
+  of reading `GRIM_DAWN_INSTALL_PATH` from the environment, defaulting to the
+  current directory when omitted.
 - Made missing base-game data and existing unreadable or corrupt archives fail
   with contextual errors instead of producing incomplete output; absent DLC
   archives remain optional.
