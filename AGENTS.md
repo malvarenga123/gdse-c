@@ -15,6 +15,14 @@
 
 `src/main.c` owns CLI parsing, input policy, staging, manifests, and publication. `src/archive.c` streams Grim Dawn ARZ/ARC data. `src/rules.c` infers item metadata and applies rarity/property colors. `src/util.c` contains allocation, little-endian I/O, paths, and filesystem helpers. `src/gdse.h` is the internal interface. See `docs/ARCHITECTURE.md` and `docs/AUDIT.md`.
 
+## Changelog
+
+- Root-level `CHANGELOG.md` is the canonical changelog and follows Keep a Changelog 1.1.0.
+- Add consumer- or operator-visible additions, changes, deprecations, removals, fixes, and security updates under the applicable heading in `[Unreleased]`.
+- Purely internal refactoring, tests, and documentation changes ordinarily do not require changelog entries unless they have an externally observable effect.
+- There is no legacy or generated changelog and no synchronization or generation command is required.
+- Do not maintain another changelog as an independent authority; future manually maintained entries belong in root-level `CHANGELOG.md`.
+
 ## Conventions and footguns
 
 - The mandatory `GRIM_DAWN_INSTALL_PATH` positional argument must be an existing Grim Dawn tree. The base ARZ and requested base language ARC are mandatory; nonexistent DLC inputs are optional, but an existing unreadable/corrupt input is fatal.
