@@ -97,11 +97,22 @@ No line differs in text. Every difference in either run is a color marker or Ful
 
 ### Monster Infrequent inference (2026-07-31, after the measurement above)
 
-The 148 Monster Infrequent lines were subsequently found to be derivable, and `--full-rainbow` now colors them. A monster record names its own drop tables in `lootMisc<N>Item<M>` fields, which are distinct from the `loot<Slot>Item<M>` fields holding the gear it wields; excluding the shared `loottables/mastertables/` pools leaves the table attached to that monster in particular, and every item in it is a Monster Infrequent.
+The 148 Monster Infrequent lines were subsequently found to be derivable, and `--full-rainbow` now colors them. A monster record names loot tables in its `loot*Item*` fields; excluding the shared `loottables/mastertables/` pools leaves the tables attached to that monster in particular, and their Rare-and-above contents are Monster Infrequents.
 
-Confirmed against real records: Yeti Horn, Gollus' Ring and Gutworm's Mark each resolve through a monster's drop slot, while Honed Longsword and Battle Shield reach only crafting blueprints and Francis' Gun only a lore-chest table. The near-miss worth remembering is the Sabre, an ordinary white base reachable from the Necromancer's summoned skeleton — pets are `Class,Pet`, carry `dropItems,0`, and live under `records/skills/`, so they never enter a scan scoped to `records/creatures/`.
+Two wrong cuts were measured before that shape settled, and both are worth not repeating:
 
-This costs about 5,200 extra record decompressions and only when the flag is set. **It has not yet been measured against the distributed Full Rainbow file**; the 273-line figure above predates it.
+| Rule | Differing lines | False positives |
+| --- | --- | --- |
+| `lootMisc<N>Item<M>` only | 205 | 3 |
+| any `loot*Item*` | 259 | 117 |
+| any `loot*Item*`, Rare and above | pending | pending |
+
+- **Slot name carries no information.** The first cut assumed `lootMisc<N>Item<M>` held a monster's own drops while `loot<Slot>Item<M>` held the gear it wields. That recovered only 71 of 149 lines, and the missed half was almost entirely wearable. The troll that drops Gollus' Ring names it in `lootFinger1Item1` with nothing but master tables in its misc slots — the exact mirror of the yeti, whose Infrequent is in `lootMisc3Item1`. Excluding mastertables was doing all the discriminating work by itself.
+- **Rarity is the discriminator the slot name is not.** Widening to every `loot*Item*` field made the total worse, not better: 117 false positives, of which 110 were Common items painted olive — `Sabre`, `Gladius`, `Club`, `Mace`, `Tower Shield`, `Pauldrons`, `Shotgun`. A monster's loot slots hold both its Infrequent and the plain gear it wields. Full Rainbow's `{^L}`, `{^Z}` and `{^F}` only ever land on Rare, Epic and Legendary, so gating the mark on Rare-and-above separates the two without any per-item knowledge.
+
+Confirmed against real records: Yeti Horn, Gollus' Ring and Gutworm's Mark each resolve through a monster's drop slot, while Honed Longsword and Battle Shield reach only crafting blueprints and Francis' Gun only a lore-chest table. The near-miss worth remembering is the Sabre, an ordinary white base reachable from the Necromancer's summoned skeleton — pets are `Class,Pet`, carry `dropItems,0`, and live under `records/skills/`, so they never enter a scan scoped to `records/creatures/`. Values naming an item record rather than a table, such as the troll's `craft_ancientheart` reference, land as an empty table and mark nothing.
+
+This costs about 5,200 extra record decompressions and only when the flag is set. **The Rare-and-above rule has not yet been measured against the distributed Full Rainbow file**; the 273-line figure above predates the whole category. Projecting from the 259-line run's buckets, it should land near 149 differing lines with about 7 residual false positives.
 
 ## Residual risks and follow-up
 
