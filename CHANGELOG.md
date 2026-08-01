@@ -16,8 +16,10 @@ unless the repository documents a different versioning policy.
   its rarity, style/quality words are painted silver rather than taking the
   base name's white, and Monster Infrequents take their own colors. Every
   category is derived from the game database; none uses a hand-maintained list.
-  Measured against the mod's distributed file on game version 1.3.0, 148 of
-  roughly 4,500 lines still differ, none of them in text.
+  The original database-only rule differed on 149 of roughly 4,500 lines
+  against the supplied game-version-1.3.0 snapshot. Generic category and
+  specialized loot-chain rules reduce that snapshot to a projected 28
+  color-only differences without a per-item table.
 - Added ISO C89 builds with POSIX `make`, including vendored LZ4 and utf8proc
   dependencies so builds do not need to download third-party packages.
 - Added native MinGW32 and MSYS2 build support for Windows.
@@ -50,6 +52,12 @@ unless the repository documents a different versioning policy.
 
 ### Fixed
 
+- Fixed `--full-rainbow` coloring random-crafting result labels and Loyalist
+  illusion equipment names that Full Rainbow intentionally leaves uncolored.
+- Fixed `--full-rainbow` leaving unique tier style words and quest-item names
+  uncolored when no item record owns their localization tags.
+- Fixed specialized `LevelTable` chains for named monster and boss families
+  being skipped while generic tier wrappers remain excluded.
 - Fixed item, affix, style, and quality tag inference so shared tags, unknown
   item classifications, rarity ties, faction items, and affixable name parts
   receive the intended colors.

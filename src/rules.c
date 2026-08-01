@@ -348,6 +348,29 @@ static int is_shared_pool(const gd_loot_table *table)
              table->creature_refs <= GD_SHARED_TABLE_REFS);
 }
 
+/* A specialized loot-table path carries a discriminator after its rarity
+   token (d02_alkamos, c03_sharzul, and so on), or names the shared ghostly
+   family. Generic tier wrappers end at the token (c01, d101) and expand into
+   every item of that tier. */
+static int is_specialized_loot_path(const char *path)
+{
+    const char *name = strrchr(path, '/');
+    const char *p;
+    name = name == NULL ? path : name + 1;
+    if (strstr(name, "_ghostly.dbr") != NULL) return 1;
+    for (p = name; *p != '\0'; ++p) {
+        const char *q;
+        if (*p != '_' || (p[1] < 'a' || p[1] > 'd') ||
+            p[2] < '0' || p[2] > '9') continue;
+        q = p + 2;
+        while (*q >= '0' && *q <= '9') ++q;
+        if (*q >= 'a' && *q <= 'z') ++q;
+        if (*q == '_' && q[1] != '\0' && strcmp(q + 1, "dbr") != 0)
+            return 1;
+    }
+    return 0;
+}
+
 static int add_loot_entry_len(gd_inference *inference, const char *table_path,
                               const char *item_path, size_t len, gd_error *err)
 {
@@ -372,27 +395,20 @@ static int add_loot_entry(gd_inference *inference, const char *table_path,
                               strlen(item_path), err);
 }
 
-/* lootName1..N name the records a table can yield.
-   A LevelTable selects among whole tables by character level and lists them in
-   a `records` string array instead. Reading that array is what finally
-   connected the superboss chains -- Alkamos reaches Soulrend through
-   lt_melee2h_d02_alkamos -- and it is deliberately not read here. Measured on
-   game version 1.3.0 it also connected every generic tier wrapper a monster can
-   reach, taking the run from 148 differing lines to 377: 184 Epic and 55
-   Legendary bases all reading as somebody's Infrequent.
-   Two attempts to keep the good chains and drop the rest failed. Restricting
-   the follow to a boss's own mastertable changed nothing, which showed the
-   generic pools arrive through mastertables that pass the reference-count test
-   yet still yield ordinary gear. Separating those from a boss's own table needs
-   a signal this pass does not have. Ten superboss lines are the prize and 239
-   regressions the price, so the array stays unread until something better than
-   the count turns up. */
+/* lootName1..N name the records a table can yield. A LevelTable instead lists
+   its child tables in a `records` string array. Follow that array only when
+   both paths are specialized: this reaches named boss/monster families while
+   excluding generic tier children such as tdyn_head_c01, which otherwise turn
+   whole Epic and Legendary pools into false Monster Infrequents. */
 static int scan_loot_table(gd_inference *inference, const gd_record *record,
                            gd_error *err)
 {
     const gd_field *field;
     for (field = record->fields; field != NULL; field = field->next) {
-        if (!starts(field->key, "lootName")) continue;
+        if (!starts(field->key, "lootName") &&
+            !(strcmp(field->key, "records") == 0 &&
+              is_specialized_loot_path(record->id) &&
+              is_specialized_loot_path(field->value))) continue;
         if (*field->value == '\0') continue;
         if (!add_loot_entry(inference, record->id, field->value, err)) return 0;
     }
@@ -564,8 +580,22 @@ void gd_inference_finish(gd_inference *inference, gd_error *err)
        mt_accessories_rings_d02_alkamos sits beside mt_accessories_rings_d01, at
        1 creature against 50. */
     for (table = inference->loot_tables; table != NULL; table = table->next) {
+        gd_loot_entry *entry;
         if (table->creature_refs == 0) continue;
-        if (is_shared_pool(table)) continue;
+        /* Even a widely shared monster-equipment mastertable can own a named
+           family such as the ghostly weapons. Seed only its specialized child;
+           never expand the shared table itself. */
+        if (is_shared_pool(table)) {
+            for (entry = table->entries; entry != NULL; entry = entry->next) {
+                gd_loot_table *nested;
+                if (!is_specialized_loot_path(entry->item_path)) continue;
+                nested = find_loot_table(inference, entry->item_path);
+                if (nested == NULL) continue;
+                nested->monster_drop = 1;
+                nested->expandable = 1;
+            }
+            continue;
+        }
         table->monster_drop = 1;
         /* Only a boss's own mastertable is followed onward. A creature also
            names generic tables for the gear it wields -- a LevelTable covering
@@ -590,6 +620,8 @@ void gd_inference_finish(gd_inference *inference, gd_error *err)
                 gd_loot_table *nested =
                     find_loot_table(inference, entry->item_path);
                 if (nested == NULL || nested->expandable) continue;
+                if (is_specialized_loot_path(table->path) &&
+                    !is_specialized_loot_path(nested->path)) continue;
                 if (is_shared_pool(nested)) continue;
                 nested->monster_drop = 1;
                 nested->expandable = 1;
@@ -665,8 +697,50 @@ const gd_tag *gd_tag_lookup(const gd_inference *inference, const char *name)
    affix, and only base names that can actually roll one. Full Rainbow instead
    colors every rarity on every name, paints style/quality words silver, and
    makes no exception for faction gear. */
-static char tag_color_of(const gd_tag *tag, int full_rainbow)
+static int decimal_suffix(const char *text)
 {
+    if (*text == '\0') return 0;
+    while (*text != '\0') {
+        if (*text < '0' || *text > '9') return 0;
+        ++text;
+    }
+    return 1;
+}
+
+/* Full Rainbow does not paint crafting-result labels or Loyalist illusion
+   equipment. These are localization categories rather than individual item
+   exceptions: their database records carry ordinary rarity, but the labels
+   describe a generated result or a cosmetic unlock instead of a normal drop. */
+static int full_rainbow_omits_tag(const char *name)
+{
+    const char *suffix;
+    if (starts(name, "tagCraftRandom")) return 1;
+    if (starts(name, "tagDLCA")) suffix = name + strlen("tagDLCA");
+    else if (starts(name, "tagDLCB")) suffix = name + strlen("tagDLCB");
+    else return 0;
+    return decimal_suffix(suffix);
+}
+
+/* Some localization categories encode their Full Rainbow role in the tag
+   itself even when no item record owns the tag. */
+static char full_rainbow_tag_color(const char *name)
+{
+    size_t len = strlen(name);
+    if (strcmp(name, "tagStyleUniqueTier2") == 0) return 'a';
+    if (strcmp(name, "tagStyleUniqueTier3") == 0) return 'p';
+    if (starts(name, "tagQuestItem") &&
+        !(len >= 4 && strcmp(name + len - 4, "Desc") == 0)) return 'g';
+    return 0;
+}
+
+static char tag_color_of(const gd_tag *tag, const char *name,
+                         int full_rainbow)
+{
+    if (full_rainbow) {
+        char category_color = full_rainbow_tag_color(name);
+        if (category_color) return category_color;
+        if (full_rainbow_omits_tag(name)) return 0;
+    }
     if (tag == NULL) return 0;
     if (full_rainbow) {
         if (tag->name_part) return 's';
@@ -693,7 +767,7 @@ static char tag_color_of(const gd_tag *tag, int full_rainbow)
 char gd_tag_color(const gd_inference *inference, const char *name,
                   int full_rainbow)
 {
-    return tag_color_of(find_tag(inference, name), full_rainbow);
+    return tag_color_of(find_tag(inference, name), name, full_rainbow);
 }
 
 char gd_property_color(const char *tag, int rainbow)
@@ -882,7 +956,7 @@ char *gd_recolor_text(const char *text, size_t length,
             memcpy(tag, text+start, eq-start); tag[eq-start] = '\0';
             memcpy(value, text+eq+1, body_end-eq-1); value[body_end-eq-1] = '\0';
             info = gd_tag_lookup(inference, tag);
-            color = tag_color_of(info, full_rainbow);
+            color = tag_color_of(info, tag, full_rainbow);
             if (!color) color = gd_property_color(tag, rainbow);
             if (color) changed = gd_apply_color(value, color, err);
             if (color && changed == NULL) {
