@@ -62,6 +62,10 @@ unless the repository documents a different versioning policy.
   making them affixable in gdse's default scheme.
 - Fixed specialized `LevelTable` chains for named monster and boss families
   being skipped while generic tier wrappers remain excluded.
+- Fixed crafted Rare bases taking Rare green instead of the Magical color of
+  the blueprint result, and named boss-chest and descriptor-less nemesis/tomb
+  loot chains being skipped.
+- Fixed invisible GDX1 illusion equipment receiving Common white.
 - Fixed item, affix, style, and quality tag inference so shared tags, unknown
   item classifications, rarity ties, faction items, and affixable name parts
   receive the intended colors.

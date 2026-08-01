@@ -51,6 +51,8 @@ roughly 4,500 lines. Generic exclusions for random-crafting labels and Loyalist
 illusion equipment account for 103 of those. Specialized loot-chain traversal
 and localization-category rules reduce the latest supplied comparison to a
 projected 12 differences without a per-item table.
+The same structural rules apply to expansion archives, including crafted-result
+rarity and named boss-chest, nemesis, and Tomb of the Heretic loot chains.
 See [the parity audit](docs/AUDIT.md#full-rainbow-parity-2026-07-31) for the
 measured breakdown, the rejected inference rules, and the distinction between
 category-level compatibility rules and exact per-tag parity.

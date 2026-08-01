@@ -169,6 +169,9 @@ static void full_rainbow_cases(void)
     t->kind=GD_ITEM; t->item_present=1; t->gear=1; ++t->counts[GD_COMMON];
     t=gd_inference_ensure_tag(&inference,"tagDLCA01Desc",&err);
     t->kind=GD_ITEM; t->item_present=1; t->gear=1; ++t->counts[GD_COMMON];
+    t=gd_inference_ensure_tag(&inference,"craftedrare",&err);
+    t->kind=GD_ITEM; t->item_present=1; t->gear=1; ++t->counts[GD_RARE];
+    t->full_rainbow_rarity=GD_MAGICAL;
     if(!gd_inference_add_part(&inference,"quality","base",&err))++failures;
     gd_inference_finish(&inference,&err);
 
@@ -188,6 +191,9 @@ static void full_rainbow_cases(void)
     if(gd_tag_color(&inference,"tagDLCA01",1)!=0)++failures;
     if(gd_tag_color(&inference,"tagDLCB25",1)!=0)++failures;
     if(gd_tag_color(&inference,"tagDLCA01Desc",1)!='w')++failures;
+    if(gd_tag_color(&inference,"tagGDX1DLCIllusionHelmInvisible",1)!=0)++failures;
+    if(gd_tag_color(&inference,"craftedrare",1)!='y')++failures;
+    if(gd_tag_color(&inference,"craftedrare",0)!='g')++failures;
     if(gd_tag_color(&inference,"tagStyleUniqueTier2",1)!='a')++failures;
     if(gd_tag_color(&inference,"tagStyleUniqueTier3",1)!='p')++failures;
     if(gd_tag_color(&inference,"tagQuestItemReward",1)!='g')++failures;
@@ -252,6 +258,12 @@ static void monster_infrequent_cases(void)
     t->kind=GD_ITEM; t->item_present=1; t->gear=1; ++t->counts[GD_COMMON];
     if(!add_item_path_for_test(&inference,"records/items/w/sabre.dbr",
                                "tagSabre",&err))++failures;
+    t=gd_inference_ensure_tag(&inference,"tagCraftedRare",&err);
+    t->kind=GD_ITEM; t->item_present=1; t->gear=1; ++t->counts[GD_RARE];
+    if(!add_item_path_for_test(&inference,"records/items/w/craftedrare.dbr",
+                               "tagCraftedRare",&err))++failures;
+    if(!add_craft_path_for_test(&inference,
+          "records/items/w/craftedrare.dbr",GD_MAGICAL,&err))++failures;
     /* Common gear sitting in a monster's own loot slot is what it wields, not
        an Infrequent. */
     t=gd_inference_ensure_tag(&inference,"tagWieldedClub",&err);
@@ -358,7 +370,7 @@ static void monster_infrequent_cases(void)
     t->kind=GD_ITEM; t->item_present=1; t->gear=1; ++t->counts[GD_EPIC];
     if(!add_item_path_for_test(&inference,"records/items/w/generictier.dbr",
                                "tagGenericTierDrop",&err))++failures;
-    record.id="records/items/loottables/gearhead/lt_head_c02_namedboss.dbr";
+    record.id="records/items/loottables/gearhead/lt_head_nemesisboss.dbr";
     record.fields=&field; field.key="records";
     field.value="records/items/loottables/gearhead/tdyn_head_c02_namedboss.dbr";
     field.next=NULL;
@@ -374,11 +386,22 @@ static void monster_infrequent_cases(void)
           "records/items/w/generictier.dbr",&err))++failures;
     if(!add_loot_entry_for_test(&inference,
           "records/items/loottables/mastertables/mt_named_family.dbr",
-          "records/items/loottables/gearhead/lt_head_c02_namedboss.dbr",
+          "records/items/loottables/gearhead/lt_head_nemesisboss.dbr",
           &err))++failures;
     table=ensure_loot_table_for_test(&inference,
           "records/items/loottables/mastertables/mt_named_family.dbr",&err);
     if(table==NULL)++failures; else table->creature_refs=50;
+    t=gd_inference_ensure_tag(&inference,"tagNamedChestDrop",&err);
+    t->kind=GD_ITEM; t->item_present=1; t->gear=1; ++t->counts[GD_RARE];
+    if(!add_item_path_for_test(&inference,"records/items/w/namedchest.dbr",
+                               "tagNamedChestDrop",&err))++failures;
+    if(!add_loot_entry_for_test(&inference,
+          "records/items/loottables/gear/tdyn_gear_b103_namedboss.dbr",
+          "records/items/w/namedchest.dbr",&err))++failures;
+    record.id="records/items/lootchests/chestloottables/chest_boss.dbr";
+    field.key="loot5Name1";
+    field.value="records/items/loottables/gear/tdyn_gear_b103_namedboss.dbr";
+    if(!scan_loot_chest_for_test(&inference,&record,&err))++failures;
 
     /* A creature also names generic tables for the gear it wields. Those are
        wrappers over the whole tier and must not be followed, or every Epic in
@@ -405,6 +428,8 @@ static void monster_infrequent_cases(void)
     if(gd_tag_color(&inference,"tagBossBlade",1)!='f')++failures;
     /* Reached only through a table no monster names: an ordinary base. */
     if(gd_tag_color(&inference,"tagSabre",1)!='w')++failures;
+    if(gd_tag_color(&inference,"tagCraftedRare",1)!='y')++failures;
+    if(gd_tag_color(&inference,"tagCraftedRare",0)!='g')++failures;
     /* In a monster's own table, but Common: still an ordinary base. */
     if(gd_tag_color(&inference,"tagWieldedClub",1)!='w')++failures;
     /* Two table hops from the creature's own table: still an Infrequent. */
@@ -418,6 +443,7 @@ static void monster_infrequent_cases(void)
     if(gd_tag_color(&inference,"tagPoolDrop",1)!='g')++failures;
     if(gd_tag_color(&inference,"tagNamedBossDrop",1)!='z')++failures;
     if(gd_tag_color(&inference,"tagGenericTierDrop",1)!='b')++failures;
+    if(gd_tag_color(&inference,"tagNamedChestDrop",1)!='l')++failures;
     /* Two hops behind a creature-named wield table: an ordinary Epic. */
     if(gd_tag_color(&inference,"tagWorldEpic",1)!='b')++failures;
     /* gdse's own scheme never emits MI colors. */

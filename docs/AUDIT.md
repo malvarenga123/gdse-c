@@ -214,6 +214,31 @@ The original 7 false positives are irreducible. `Gutworm's Bloody Seal`, `Razorb
 
 The tier collision is also irreducible: `tagHeadC034` and `tagHeadC034B` are the same helm at two tiers, Full Rainbow paints them `{^Z}` and `{^B}`, and gdse reads no field that separates them.
 
+### Expansion localization files
+
+The supplied GDX1 and GDX2 comparisons contain 38 and 18 differences,
+respectively. They expose three additional generic signals:
+
+- Twenty Rare item records are results of Magical blueprints (16 in GDX1 and
+  4 in GDX2). The formula's `forcedRandomArtifactName` points at the exact
+  created base, so Full Rainbow uses the formula classification `{^Y}` without
+  guessing from the localized name.
+- Some nemesis `LevelTable` parents do not carry a rarity token, although their
+  children do (`lt_legs_nemesisaetherialvanguard` to
+  `tdyn_legs_b101_aetherialvanguardnemesis`). Recording a specialized child is
+  sufficient evidence; requiring the parent to repeat the token missed ten
+  expansion MIs. Tomb of the Heretic tables use the same named-family structure
+  without any rarity token in their paths.
+- Kra'vall and Loghorrean items are behind specialized tables named by boss
+  chests rather than creatures. A boss-chest record may seed such a child table
+  directly without treating generic chest pools as Monster Infrequents.
+
+The three invisible GDX1 illusion equipment tags are another coherent cosmetic
+category and remain uncolored. These rules project the expansion comparisons
+from 38 to 9 differences for GDX1 and from 18 to 8 for GDX2, without per-item
+decisions. The residue consists of hand-list anomalies and Legendary items with
+no recoverable monster-table relationship in the supplied record graph.
+
 ### Specialized `LevelTable` traversal
 
 The specialized traversal recovers Shar'Zul (`Furnace`, `Incinerator`,

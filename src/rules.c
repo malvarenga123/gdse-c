@@ -105,6 +105,7 @@ gd_tag *gd_inference_ensure_tag(gd_inference *inference, const char *name,
     tag->name = gd_strdup(name, err);
     if (tag->name == NULL) { free(tag); return NULL; }
     tag->rarity = GD_UNKNOWN;
+    tag->full_rainbow_rarity = GD_UNKNOWN;
     tag->next = inference->tags;
     inference->tags = tag;
     bucket = (size_t)(hash_text(name) % inference->tag_bucket_count);
@@ -119,6 +120,7 @@ void gd_inference_init(gd_inference *inference)
     inference->tags = NULL;
     inference->parts = NULL;
     inference->item_paths = NULL;
+    inference->craft_paths = NULL;
     inference->loot_tables = NULL;
     inference->tag_buckets = NULL;
     inference->part_buckets = NULL;
@@ -358,6 +360,7 @@ static int is_specialized_loot_path(const char *path)
     const char *p;
     name = name == NULL ? path : name + 1;
     if (strstr(name, "_ghostly.dbr") != NULL) return 1;
+    if (strstr(name, "_tombofheretic_") != NULL) return 1;
     for (p = name; *p != '\0'; ++p) {
         const char *q;
         if (*p != '_' || (p[1] < 'a' || p[1] > 'd') ||
@@ -396,10 +399,10 @@ static int add_loot_entry(gd_inference *inference, const char *table_path,
 }
 
 /* lootName1..N name the records a table can yield. A LevelTable instead lists
-   its child tables in a `records` string array. Follow that array only when
-   both paths are specialized: this reaches named boss/monster families while
-   excluding generic tier children such as tdyn_head_c01, which otherwise turn
-   whole Epic and Legendary pools into false Monster Infrequents. */
+   its child tables in a `records` string array. Follow only specialized child
+   paths: some named parent tables carry no rarity token themselves (for
+   example lt_legs_nemesisaetherialvanguard), while their b101_* children carry
+   the discriminator. Generic children such as tdyn_head_c01 remain excluded. */
 static int scan_loot_table(gd_inference *inference, const gd_record *record,
                            gd_error *err)
 {
@@ -407,10 +410,27 @@ static int scan_loot_table(gd_inference *inference, const gd_record *record,
     for (field = record->fields; field != NULL; field = field->next) {
         if (!starts(field->key, "lootName") &&
             !(strcmp(field->key, "records") == 0 &&
-              is_specialized_loot_path(record->id) &&
               is_specialized_loot_path(field->value))) continue;
         if (*field->value == '\0') continue;
         if (!add_loot_entry(inference, record->id, field->value, err)) return 0;
+    }
+    return 1;
+}
+
+/* Boss chests are world proxies rather than creatures, but their named-family
+   child tables carry the same specialization signal as monster loot. */
+static int scan_loot_chest(gd_inference *inference, const gd_record *record,
+                           gd_error *err)
+{
+    const gd_field *field;
+    for (field = record->fields; field != NULL; field = field->next) {
+        gd_loot_table *table;
+        if (!starts(field->value, "records/items/loottables/") ||
+            !is_specialized_loot_path(field->value)) continue;
+        table = ensure_loot_table(inference, field->value, err);
+        if (table == NULL) return 0;
+        table->monster_drop = 1;
+        table->expandable = 1;
     }
     return 1;
 }
@@ -462,6 +482,18 @@ int add_loot_entry_for_test(gd_inference *inference, const char *table_path,
     return add_loot_entry(inference, table_path, item_path, err);
 }
 
+int scan_loot_table_for_test(gd_inference *inference, const gd_record *record,
+                             gd_error *err)
+{
+    return scan_loot_table(inference, record, err);
+}
+
+int scan_loot_chest_for_test(gd_inference *inference, const gd_record *record,
+                             gd_error *err)
+{
+    return scan_loot_chest(inference, record, err);
+}
+
 gd_loot_table *ensure_loot_table_for_test(gd_inference *inference,
                                           const char *path, gd_error *err)
 {
@@ -474,10 +506,23 @@ gd_loot_table *find_loot_table_for_test(const gd_inference *inference,
     return find_loot_table(inference, path);
 }
 
-int scan_loot_table_for_test(gd_inference *inference, const gd_record *record,
-                             gd_error *err)
+static int add_craft_path(gd_inference *inference, const char *path,
+                          gd_rarity rank, gd_error *err)
 {
-    return scan_loot_table(inference, record, err);
+    gd_craft_path *item = (gd_craft_path *)gd_alloc(sizeof(*item), err);
+    if (item == NULL) return 0;
+    item->path = gd_strdup(path, err);
+    if (item->path == NULL) { free(item); return 0; }
+    item->rarity = rank;
+    item->next = inference->craft_paths;
+    inference->craft_paths = item;
+    return 1;
+}
+
+int add_craft_path_for_test(gd_inference *inference, const char *path,
+                            gd_rarity rank, gd_error *err)
+{
+    return add_craft_path(inference, path, rank, err);
 }
 
 int gd_infer_database(gd_inference *inference, gd_arz *db, gd_error *err)
@@ -499,6 +544,10 @@ int gd_infer_database(gd_inference *inference, gd_arz *db, gd_error *err)
             if (!scan_loot_table(inference, &record, err)) { gd_record_free(&record); return 0; }
             gd_record_free(&record); continue;
         }
+        if (starts(record.id, "records/items/lootchests/")) {
+            if (!scan_loot_chest(inference, &record, err)) { gd_record_free(&record); return 0; }
+            gd_record_free(&record); continue;
+        }
         if (starts(record.id, "records/items/lootaffixes/prefix/") ||
             starts(record.id, "records/items/lootaffixes/suffix/")) {
             tag_name = gd_record_field(&record, "lootRandomizerName");
@@ -515,6 +564,17 @@ int gd_infer_database(gd_inference *inference, gd_arz *db, gd_error *err)
             const char *class_name;
             const char *part;
             const char *set_name;
+            class_name = gd_record_field(&record, "Class");
+            if (class_name != NULL &&
+                strcmp(class_name, "ItemArtifactFormula") == 0) {
+                const char *crafted =
+                    gd_record_field(&record, "forcedRandomArtifactName");
+                rank = rarity(gd_record_field(&record, "itemClassification"));
+                if (crafted != NULL && *crafted != '\0' && rank != GD_UNKNOWN &&
+                    !add_craft_path(inference, crafted, rank, err)) {
+                    gd_record_free(&record); return 0;
+                }
+            }
             tag_name = gd_record_field(&record, "itemNameTag");
             if (tag_name == NULL || *tag_name == '\0') { gd_record_free(&record); continue; }
             tag = gd_inference_ensure_tag(inference, tag_name, err);
@@ -531,7 +591,6 @@ int gd_infer_database(gd_inference *inference, gd_arz *db, gd_error *err)
             ++tag->name_records;
             set_name = gd_record_field(&record, "itemSetName");
             if (set_name != NULL && *set_name != '\0') ++tag->set_records;
-            class_name = gd_record_field(&record, "Class");
             if (class_name != NULL && (starts(class_name, "Weapon") ||
                                        starts(class_name, "Armor"))) tag->gear = 1;
             part = gd_record_field(&record, "itemStyleTag");
@@ -562,6 +621,7 @@ void gd_inference_finish(gd_inference *inference, gd_error *err)
     gd_tag *tag;
     gd_part *part;
     gd_loot_table *table;
+    gd_craft_path *craft;
     (void)err;
     for (tag = inference->tags; tag != NULL; tag = tag->next) {
         int i, best = -1;
@@ -573,6 +633,16 @@ void gd_inference_finish(gd_inference *inference, gd_error *err)
         tag->rarity = best < 0 ? GD_UNKNOWN : (gd_rarity)best;
         tag->affixable = tag->gear && !tag->faction && best >= 0 && best <= GD_RARE;
         tag->set_item = tag->set_records * 2 > tag->name_records;
+    }
+    /* Crafted bases carry Rare item records, but Full Rainbow colors their
+       displayed result name from the Magical blueprint classification. The
+       formula points at the exact created base through forcedRandomArtifactName. */
+    for (craft = inference->craft_paths; craft != NULL; craft = craft->next) {
+        const gd_item_path *item = find_item_path(inference, craft->path);
+        gd_tag *owner;
+        if (item == NULL) continue;
+        owner = find_tag(inference, item->tag);
+        if (owner != NULL) owner->full_rainbow_rarity = craft->rarity;
     }
     /* mastertables/ is the shared pooling layer, and a table a creature names
        outside it belongs to that creature. The reference count is not a general
@@ -593,9 +663,10 @@ void gd_inference_finish(gd_inference *inference, gd_error *err)
         if (is_shared_pool(table)) {
             for (entry = table->entries; entry != NULL; entry = entry->next) {
                 gd_loot_table *nested;
-                if (!is_specialized_loot_path(entry->item_path)) continue;
                 nested = find_loot_table(inference, entry->item_path);
-                if (nested == NULL) continue;
+                if (nested == NULL ||
+                    (!is_specialized_loot_path(entry->item_path) &&
+                     nested->entries == NULL)) continue;
                 nested->monster_drop = 1;
                 nested->expandable = 1;
             }
@@ -679,6 +750,8 @@ void gd_inference_free(gd_inference *inference)
     while (part != NULL) { gd_part *next = part->next; free(part->name); free(part->base); free(part); part = next; }
     { gd_item_path *item = inference->item_paths;
       while (item != NULL) { gd_item_path *n = item->next; free(item->path); free(item->tag); free(item); item = n; } }
+    { gd_craft_path *item = inference->craft_paths;
+      while (item != NULL) { gd_craft_path *n = item->next; free(item->path); free(item); item = n; } }
     { gd_loot_table *table = inference->loot_tables;
       while (table != NULL) {
           gd_loot_table *n = table->next;
@@ -720,6 +793,7 @@ static int full_rainbow_omits_tag(const char *name)
 {
     const char *suffix;
     if (starts(name, "tagCraftRandom")) return 1;
+    if (starts(name, "tagGDX1DLCIllusion")) return 1;
     if (starts(name, "tagDLCA")) suffix = name + strlen("tagDLCA");
     else if (starts(name, "tagDLCB")) suffix = name + strlen("tagDLCB");
     else return 0;
@@ -782,6 +856,11 @@ static char tag_color_of(const gd_tag *tag, const char *name,
             if (tag->rarity == GD_LEGENDARY) return 'f';
             return 'l';
         }
+        if (tag->full_rainbow_rarity == GD_COMMON) return 'w';
+        if (tag->full_rainbow_rarity == GD_MAGICAL) return 'y';
+        if (tag->full_rainbow_rarity == GD_RARE) return 'g';
+        if (tag->full_rainbow_rarity == GD_EPIC) return 'b';
+        if (tag->full_rainbow_rarity == GD_LEGENDARY) return 'i';
         if (tag->rarity == GD_COMMON) return 'w';
         if (tag->rarity == GD_MAGICAL) return 'y';
         if (tag->rarity == GD_RARE) return 'g';
