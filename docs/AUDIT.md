@@ -75,7 +75,7 @@ No line differs in text. Every difference in either run is a color marker or Ful
 
 | Cause | Lines | Actionable |
 | --- | --- | --- |
-| Monster Infrequent coloring | 148 | Yes — implemented after this measurement; 131 of them now colored |
+| Monster Infrequent coloring | 148 | Yes — implemented after this measurement; 133 of them now colored |
 | Tags absent from Full Rainbow's list | 103 | No — gdse colors ordinary gear it has no entry for |
 | Tags with no item record at all | 15 | No |
 | Enemy-only gear | 5 | No |
@@ -105,35 +105,71 @@ Two wrong cuts were measured before that shape settled, and both are worth not r
 | --- | --- | --- |
 | `lootMisc<N>Item<M>` only | 205 | 3 |
 | any `loot*Item*` | 259 | 117 |
-| any `loot*Item*`, Rare and above | **149** | 7 |
+| any `loot*Item*`, Rare and above | 149 | 7 |
+| plus boss-owned mastertables | **148** | 7 |
+| plus `LevelTable` arrays | 377 | 246 |
+| plus `LevelTable` arrays, boss chains only | 377 | 246 |
 
 - **Slot name carries no information.** The first cut assumed `lootMisc<N>Item<M>` held a monster's own drops while `loot<Slot>Item<M>` held the gear it wields. That recovered only 71 of 149 lines, and the missed half was almost entirely wearable. The troll that drops Gollus' Ring names it in `lootFinger1Item1` with nothing but master tables in its misc slots — the exact mirror of the yeti, whose Infrequent is in `lootMisc3Item1`. Excluding mastertables was doing all the discriminating work by itself.
 - **Rarity is the discriminator the slot name is not.** Widening to every `loot*Item*` field made the total worse, not better: 117 false positives, of which 110 were Common items painted olive — `Sabre`, `Gladius`, `Club`, `Mace`, `Tower Shield`, `Pauldrons`, `Shotgun`. A monster's loot slots hold both its Infrequent and the plain gear it wields. Full Rainbow's `{^L}`, `{^Z}` and `{^F}` only ever land on Rare, Epic and Legendary, so gating the mark on Rare-and-above separates the two without any per-item knowledge.
 
 Confirmed against real records: Yeti Horn, Gollus' Ring and Gutworm's Mark each resolve through a monster's drop slot, while Honed Longsword and Battle Shield reach only crafting blueprints and Francis' Gun only a lore-chest table. The near-miss worth remembering is the Sabre, an ordinary white base reachable from the Necromancer's summoned skeleton — pets are `Class,Pet`, carry `dropItems,0`, and live under `records/skills/`, so they never enter a scan scoped to `records/creatures/`. Values naming an item record rather than a table, such as the troll's `craft_ancientheart` reference, land as an empty table and mark nothing.
 
+- **`mastertables/` is the shared pooling layer, but not uniformly.** A few records filed there are one boss's own table: `mt_gearweaponsmelee2h_d02_alkamos` sits beside `mt_accessories_rings_d01`, same directory and same tier letter, and nothing in the name or the family separates them. Counting the distinct creature records that name each one does. Measured on version 1.3.0 the populations do not come close to touching — `mt_accessories_rings_a01` and `_d01` at 50 creatures each, `mt_beast_large_a01` at 82, `mt_gearweaponsshield` at 90, against 1 for each of Alkamos' two. `GD_SHARED_TABLE_REFS` cuts inside that gap.
+- **That count does not generalize outside `mastertables/`.** Replacing the path rule with a pure reference count cost 26 correct lines and gained 2: a monster family has one creature record per variant and difficulty, so dozens of yetis name the single yeti table and it reads exactly like a world pool. The directory carries real information and the count only rescues the exceptions inside it.
+
 This costs about 5,200 extra record decompressions and only when the flag is set.
 
 ### Measurement of the shipped rule
 
-The Rare-and-above rule was measured on the same installation: **149 differing lines**, down from 273 before the category existed. Still no text-level difference of any kind. The residue decomposes exactly:
+Measured on the same installation: **148 differing lines**, down from 273 before the category existed. Still no text-level difference of any kind. The residue decomposes exactly:
 
 | Bucket | Lines | Cause |
 | --- | --- | --- |
 | `- → W` / `- → Y` | 103 | Full Rainbow's hand list has no entry; gdse colors ordinary gear |
-| `F → I`, `Z → B`, `L → G` | 17 | Monster Infrequents gdse still misses |
 | `W → -`, `G → -`, `S → -` | 19 | Tags with no item record, and enemy-only gear |
+| `F → I`, `Z → B`, `L → G` | 15 | Monster Infrequents gdse still misses |
 | `B → Z`, `G → L` | 7 | Monster Infrequents Full Rainbow does not color |
 | `A → -`, `P → -`, `F → -` | 3 | The two unique styles, and `tagItemTest` |
+| `B → Z` | 1 | `tagHeadC034B`, a tier collision |
 
-The 7 false positives are irreducible. `Gutworm's Bloody Seal`, `Razorback's Spined Mantle`, `Bernard's Slightly-Chewed Buckler`, `Leander Greene's Hand Cannon`, `Bloodreaper's Cleaver`, `Reddan Memento Ring` and `Skinner's Torch` are all genuine named-monster drops that Full Rainbow's hand-maintained list happens not to paint. Nothing in the database distinguishes them from the Infrequents it does paint, so no derivable rule removes them.
+The 7 false positives are irreducible. `Gutworm's Bloody Seal`, `Razorback's Spined Mantle`, `Bernard's Slightly-Chewed Buckler`, `Leander Greene's Hand Cannon`, `Bloodreaper's Cleaver`, `Reddan Memento Ring` and `Skinner's Torch` are all genuine named-monster drops that Full Rainbow's hand-maintained list happens not to paint. Nothing in the database distinguishes them from the Infrequents it does paint.
 
-The 17 misses are not scattered. They are superboss and nemesis loot — Shar'Zul (`Furnace`, `Incinerator`, `Worldeater`), Mogdrogen (`Spaulders`, `Mantle`), Alkamos (`Soulrend`, both `Touch of` rings), Loghorrean, the Mad Queen, `The Triumvirate`, `Eldritch-Keeper's Casque`, `Outcast's Secret`, and the Rare `Spectral` weapon family. A group that coherent points at one structural cause rather than seventeen unrelated ones; the two candidates are loot tables that nest one level (a table entry naming another table, which the resolve pass drops because the entry does not match any item record) and creature records naming drops through a field family other than `loot*Item*`. Neither has been checked.
+The tier collision is also irreducible: `tagHeadC034` and `tagHeadC034B` are the same helm at two tiers, Full Rainbow paints them `{^Z}` and `{^B}`, and gdse reads no field that separates them.
+
+### The last 15 lines, and why the array that would fix them stays unread
+
+The remaining misses are superboss loot — Shar'Zul (`Furnace`, `Incinerator`, `Worldeater`), Mogdrogen (`Spaulders`, `Mantle`), Alkamos (`Soulrend`, both `Touch of` rings), Loghorrean, the Mad Queen, `Outcast's Secret`, and the Rare `Spectral`/`Manticore` weapon family. They are reached through a wrapper the resolve deliberately does not follow.
+
+Alkamos' chain, read end to end from the records themselves:
+
+```
+ghost_stepsoftorment_03.dbr   lootRightHandItem2  Class,Monster
+  mt_gearweaponsmelee2h_d02_alkamos.dbr   lootName1     Class,LootMasterTable
+    lt_melee2h_d02_alkamos.dbr            records[2]    Class,LevelTable
+      tdyn_melee2h_d02_alkamos.dbr        lootName1/2   Class,LootItemTable_DynWeight
+        d012_axe2h.dbr                                  Soulrend
+```
+
+A `LevelTable` selects among whole tables by character level and lists them in a `records` **string array**. Reading that array connects all ten of the boss chains above, including the two Alkamos set rings — the `(S) ` marker and the `{^F}` Infrequent color compose correctly. It also connects every generic tier wrapper a monster can reach, because monsters name `LevelTable`s for the gear they wield alongside the ones holding their Infrequents. Measured: **377 differing lines**, 184 Epic and 55 Legendary bases reading as somebody's Infrequent. Ten lines gained, 239 lost.
+
+Two attempts to keep one and drop the other failed:
+
+- Restricting the follow to a boss's own mastertable and whatever it leads to produced **byte-identical output**. That rules out creature-named wield tables as the source, and points at mastertables that pass the reference-count test yet still yield ordinary gear.
+- The reference count itself cannot separate those, for the reason recorded above: it is only meaningful within `mastertables/`, and these are inside it on the wrong side.
+
+Separating a boss's own wrapper from a generic one needs a signal this pass does not have. `scan_loot_table` therefore reads `lootName*` and not `records`, and the comment there says why so it is not re-attempted from scratch.
+
+### A reader defect found along the way
+
+`parse_fields` kept a string field only when its value count was 1, silently discarding every array-valued string field in the database — for every code path, flag or no flag. It was found while chasing the chain above and is fixed independently: arrays now arrive as one field per element, and `gd_record_field` still answers with the first, so single-valued readers are unaffected. No consumer reads an array today, so the fix changes no output.
+
+The lesson worth keeping is about the encoding. A `.dbr` text export writes an array as one semicolon-joined string; the ARZ stores one string index per element. Code written against a text export will not fire on real data, and the first attempt at `records` parsing did exactly that and produced three rounds of unexplained byte-identical results.
 
 ## Residual risks and follow-up
 
 - Compare generated output byte-for-byte with the pre-fork Rust executable. The C readers have now been exercised against real version-3 game data (see *Full Rainbow parity*), but the two implementations have never been diffed against each other on the same installation.
-- Establish why 17 superboss and nemesis Infrequents are not reached by the loot-table resolve. Nested loot tables and non-`loot*Item*` drop fields are the two untested hypotheses; see *Measurement of the shipped rule*.
+- The last 15 Monster Infrequent lines need a way to tell a boss's own `LevelTable` wrapper from a generic tier wrapper. The chain is fully understood and the code to walk it is a few lines; what is missing is the discriminator. See *The last 15 lines* before attempting it — reference counts and path structure have both been measured and both fail.
 - Exercise publication rollback with injected rename/write failures on Linux and Windows.
 - Validate non-English archives and invalid-byte behavior.
 - Confirm archive record identifiers' documented contract upstream; containment is enforced defensively regardless.
