@@ -132,6 +132,7 @@ void gd_inference_init(gd_inference *inference)
     inference->part_count = 0;
     inference->item_path_count = 0;
     inference->loot_table_count = 0;
+    inference->creature_serial = 0;
 }
 
 static int resize_parts(gd_inference *inference, size_t count, gd_error *err)
@@ -395,29 +396,31 @@ static int scan_loot_table(gd_inference *inference, const gd_record *record,
    drop slots and the equipment slots -- which slot an item uses says nothing
    about what it is. A yeti carries its Monster Infrequent in lootMisc3Item1,
    while the troll that drops Gollus' Ring carries it in lootFinger1Item1 and
-   has nothing but master tables in its misc slots.
-   Master tables are the shared world-drop pools every monster rolls from, so
-   they are excluded; what is left is the table attached to this monster in
-   particular. Its Rare-and-above contents are Monster Infrequents; the Common
-   gear alongside them is what the monster wields. Values naming an item record
-   rather than a table land as an empty table and mark nothing.
-   Pets and other non-monster actors never reach here: they are Class Pet and
-   live outside records/creatures/. */
+   its misc slots hold only pools shared with the rest of the world.
+   Count how many distinct creatures name each table rather than deciding from
+   its path. Pets and other non-monster actors never reach here: they are Class
+   Pet and live outside records/creatures/. */
 static int scan_creature(gd_inference *inference, const gd_record *record,
                          gd_error *err)
 {
     const gd_field *field;
     const char *class_name = gd_record_field(record, "Class");
+    unsigned long serial;
     if (class_name == NULL || !starts(class_name, "Monster")) return 1;
+    serial = ++inference->creature_serial;
     for (field = record->fields; field != NULL; field = field->next) {
         gd_loot_table *table;
         if (!starts(field->key, "loot") ||
             strstr(field->key, "Item") == NULL) continue;
         if (*field->value == '\0') continue;
-        if (strstr(field->value, "/loottables/mastertables/") != NULL) continue;
         table = ensure_loot_table(inference, field->value, err);
         if (table == NULL) return 0;
-        table->monster_drop = 1;
+        /* One creature naming the same table in six equipment slots is still
+           one creature. */
+        if (table->ref_serial != serial) {
+            table->ref_serial = serial;
+            ++table->creature_refs;
+        }
     }
     return 1;
 }
@@ -543,14 +546,24 @@ void gd_inference_finish(gd_inference *inference, gd_error *err)
         tag->affixable = tag->gear && !tag->faction && best >= 0 && best <= GD_RARE;
         tag->set_item = tag->set_records * 2 > tag->name_records;
     }
-    /* Loot tables nest. A creature names an lt_ table whose entries are further
-       tdyn_ tables holding the actual items, and the items behind that wrapper
-       are Infrequents just the same: Alkamos reaches Soulrend through
-       lt_melee2h_d02_alkamos -> tdyn_melee2h_d02_alkamos, and ghosts reach the
-       Spectral Longsword through lt_sword1h_ghostly -> tdyn_sword1h_b02_ghostly.
-       Spread the mark to a fixed point before resolving items. Master tables
-       stay excluded here as well, or one nested reference would drag in the
-       shared world-drop pool the creature-level check exists to keep out. */
+    /* A table named by one or a few creatures belongs to those creatures; one
+       named by dozens is a pool the whole world rolls from. The two populations
+       are far apart and the directory a table lives in does not separate them:
+       mt_accessories_rings_d02_alkamos sits beside mt_accessories_rings_d01,
+       same family and same tier, at 1 creature against 50. */
+    for (table = inference->loot_tables; table != NULL; table = table->next) {
+        if (table->creature_refs > 0 &&
+            table->creature_refs <= GD_SHARED_TABLE_REFS)
+            table->monster_drop = 1;
+    }
+    /* Loot tables nest. A creature names a table whose entries are further
+       tables holding the actual items, and the items behind those wrappers are
+       Infrequents just the same: Alkamos reaches Soulrend through
+       mt_gearweaponsmelee2h_d02_alkamos -> lt_melee2h_d02_alkamos ->
+       tdyn_melee2h_d02_alkamos. Spread the mark to a fixed point before
+       resolving items, stopping at any table shared widely enough to be a
+       world pool -- one nested reference into one of those would undo the
+       whole distinction. */
     for (;;) {
         int changed = 0;
         for (table = inference->loot_tables; table != NULL; table = table->next) {
@@ -560,8 +573,7 @@ void gd_inference_finish(gd_inference *inference, gd_error *err)
                 gd_loot_table *nested =
                     find_loot_table(inference, entry->item_path);
                 if (nested == NULL || nested->monster_drop) continue;
-                if (strstr(entry->item_path,
-                           "/loottables/mastertables/") != NULL) continue;
+                if (nested->creature_refs > GD_SHARED_TABLE_REFS) continue;
                 nested->monster_drop = 1;
                 changed = 1;
             }

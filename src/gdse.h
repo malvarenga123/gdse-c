@@ -50,15 +50,25 @@ typedef struct gd_loot_entry {
     struct gd_loot_entry *next;
 } gd_loot_entry;
 
-/* A records/items/loottables/ record: what it contains, and whether a monster
-   names it in one of its own drop slots. */
+/* A records/items/loottables/ record: what it contains, how many distinct
+   creature records name it, and whether that count makes it one monster's own
+   drop table rather than a pool the whole world rolls from. */
 typedef struct gd_loot_table {
     char *path;
     gd_loot_entry *entries;
+    unsigned long creature_refs;
+    unsigned long ref_serial;
     int monster_drop;
     struct gd_loot_table *next;
     struct gd_loot_table *hash_next;
 } gd_loot_table;
+
+/* A table named by more than this many creatures is a shared pool. Measured on
+   game version 1.3.0, the two populations do not overlap or even approach each
+   other: the shared pools sit at 50, 50, 82 and 90 creatures, while a boss's
+   own table sits at 1. Any cut inside that gap gives the same answer; this one
+   leaves room for a boss with a few difficulty or nemesis variants. */
+#define GD_SHARED_TABLE_REFS 8
 
 typedef struct gd_part {
     char *name;
@@ -85,6 +95,7 @@ typedef struct gd_inference {
     size_t part_count;
     size_t item_path_count;
     size_t loot_table_count;
+    unsigned long creature_serial;
 } gd_inference;
 
 typedef struct gd_field {
