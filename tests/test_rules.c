@@ -192,6 +192,13 @@ static void full_rainbow_cases(void)
     if(gd_tag_color(&inference,"tagStyleUniqueTier3",1)!='p')++failures;
     if(gd_tag_color(&inference,"tagQuestItemReward",1)!='g')++failures;
     if(gd_tag_color(&inference,"tagQuestItemRewardDesc",1)!=0)++failures;
+    if(gd_tag_color(&inference,"tagQualityWeaponWood11",1)!='s')++failures;
+    if(gd_tag_color(&inference,"tagShoulderF005",1)!='g')++failures;
+    if(gd_tag_color(&inference,"tagTorsoF010",1)!='g')++failures;
+    if(gd_tag_color(&inference,"tagHeadA010",1)!='w')++failures;
+    if(gd_tag_color(&inference,"tagShieldA011",1)!='w')++failures;
+    if(gd_tag_color(&inference,"tagTorsoM001",1)!='w')++failures;
+    if(gd_tag_color(&inference,"tagShoulderF005Desc",1)!=0)++failures;
 
     out=gd_recolor_text("setpiece=Explorer's Footpads\r\n",
                         strlen("setpiece=Explorer's Footpads\r\n"),

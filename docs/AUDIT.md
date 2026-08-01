@@ -181,10 +181,19 @@ end at `c01` or `d101`. Following only specialized parent/child paths recovers
 15 missing MI colors. It introduces one known tier collision,
 `tagHeadC034B`, rather than the 239 false positives caused by following every
 `records` array. Together with the two unique-style and two quest-item category
-colors, the current rules project to **28 differing tags** on the supplied
-snapshot.
+colors, that first implementation projected **28 differing tags** on the
+supplied snapshot.
 
-The 7 false positives are irreducible. `Gutworm's Bloody Seal`, `Razorback's Spined Mantle`, `Bernard's Slightly-Chewed Buckler`, `Leander Greene's Hand Cannon`, `Bloodreaper's Cleaver`, `Reddan Memento Ring` and `Skinner's Torch` are all genuine named-monster drops that Full Rainbow's hand-maintained list happens not to paint. Nothing in the database distinguishes them from the Infrequents it does paint.
+The next generated output confirmed **29 differences**. The one-line delta
+from the projection is `Scythe of Tenebris`: it is a genuine specialized boss
+drop and therefore satisfies the same generic rule, but Full Rainbow leaves it
+at ordinary Epic blue. The remaining uncolored entries reveal five coherent
+missing-record families. Numeric-only fallbacks now cover wooden quality words,
+base head and shield names, monster torsos, and faction shoulders/torsos without
+touching their description tags. Those rules remove 13 more lines, leaving a
+projected **16 differences**.
+
+The original 7 false positives are irreducible. `Gutworm's Bloody Seal`, `Razorback's Spined Mantle`, `Bernard's Slightly-Chewed Buckler`, `Leander Greene's Hand Cannon`, `Bloodreaper's Cleaver`, `Reddan Memento Ring` and `Skinner's Torch` are all genuine named-monster drops that Full Rainbow's hand-maintained list happens not to paint. `Scythe of Tenebris` is the same kind of omission exposed by the specialized traversal. Nothing in the database distinguishes them from the Infrequents Full Rainbow does paint.
 
 The tier collision is also irreducible: `tagHeadC034` and `tagHeadC034B` are the same helm at two tiers, Full Rainbow paints them `{^Z}` and `{^B}`, and gdse reads no field that separates them.
 

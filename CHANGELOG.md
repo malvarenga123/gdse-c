@@ -18,7 +18,7 @@ unless the repository documents a different versioning policy.
   category is derived from the game database; none uses a hand-maintained list.
   The original database-only rule differed on 149 of roughly 4,500 lines
   against the supplied game-version-1.3.0 snapshot. Generic category and
-  specialized loot-chain rules reduce that snapshot to a projected 28
+  specialized loot-chain rules reduce the latest snapshot to a projected 16
   color-only differences without a per-item table.
 - Added ISO C89 builds with POSIX `make`, including vendored LZ4 and utf8proc
   dependencies so builds do not need to download third-party packages.
@@ -56,6 +56,8 @@ unless the repository documents a different versioning policy.
   illusion equipment names that Full Rainbow intentionally leaves uncolored.
 - Fixed `--full-rainbow` leaving unique tier style words and quest-item names
   uncolored when no item record owns their localization tags.
+- Fixed missing-record members of the wooden-quality, base head/shield/monster
+  torso, and faction shoulder/torso families remaining uncolored.
 - Fixed specialized `LevelTable` chains for named monster and boss families
   being skipped while generic tier wrappers remain excluded.
 - Fixed item, affix, style, and quality tag inference so shared tags, unknown

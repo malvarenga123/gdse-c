@@ -733,6 +733,28 @@ static char full_rainbow_tag_color(const char *name)
     return 0;
 }
 
+/* A few coherent localization families outlive the item records that once
+   supplied their classification. Apply their family color only as a fallback;
+   an inferred record always remains authoritative. Requiring an all-decimal
+   suffix keeps description and other related tags untouched. */
+static char full_rainbow_missing_tag_color(const char *name)
+{
+    static const char *silver[] = {"tagQualityWeaponWood"};
+    static const char *green[] = {"tagShoulderF", "tagTorsoF"};
+    static const char *white[] = {"tagHeadA", "tagShieldA", "tagTorsoM"};
+    size_t i;
+    for (i = 0; i < sizeof(silver) / sizeof(silver[0]); ++i)
+        if (starts(name, silver[i]) &&
+            decimal_suffix(name + strlen(silver[i]))) return 's';
+    for (i = 0; i < sizeof(green) / sizeof(green[0]); ++i)
+        if (starts(name, green[i]) &&
+            decimal_suffix(name + strlen(green[i]))) return 'g';
+    for (i = 0; i < sizeof(white) / sizeof(white[0]); ++i)
+        if (starts(name, white[i]) &&
+            decimal_suffix(name + strlen(white[i]))) return 'w';
+    return 0;
+}
+
 static char tag_color_of(const gd_tag *tag, const char *name,
                          int full_rainbow)
 {
@@ -741,7 +763,8 @@ static char tag_color_of(const gd_tag *tag, const char *name,
         if (category_color) return category_color;
         if (full_rainbow_omits_tag(name)) return 0;
     }
-    if (tag == NULL) return 0;
+    if (tag == NULL)
+        return full_rainbow ? full_rainbow_missing_tag_color(name) : 0;
     if (full_rainbow) {
         if (tag->name_part) return 's';
         /* Monster Infrequents take their own colors at every tier. */

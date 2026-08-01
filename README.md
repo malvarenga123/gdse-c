@@ -49,8 +49,8 @@ database, while Full Rainbow's file is a hand-maintained tag list. On game
 version 1.3.0 the original inference left 149 color-only differences among
 roughly 4,500 lines. Generic exclusions for random-crafting labels and Loyalist
 illusion equipment account for 103 of those. Specialized loot-chain traversal
-and localization-category rules reduce the supplied comparison to a projected
-28 differences without a per-item table.
+and localization-category rules reduce the latest supplied comparison to a
+projected 16 differences without a per-item table.
 See [the parity audit](docs/AUDIT.md#full-rainbow-parity-2026-07-31) for the
 measured breakdown, the rejected inference rules, and the distinction between
 category-level compatibility rules and exact per-tag parity.
