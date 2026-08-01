@@ -375,9 +375,12 @@ static int add_loot_entry(gd_inference *inference, const char *table_path,
 /* Two record shapes name a table's contents, and only one of them is a loot
    table in the LootItemTable sense. lootName1..N name the records a weighted
    table can yield. A LevelTable instead selects among whole tables by character
-   level, and lists them in one semicolon-separated `records` field -- which is
-   how Alkamos reaches Soulrend, through lt_melee2h_d02_alkamos. Reading only
-   lootName left every such wrapper looking empty. */
+   level and lists them in a `records` string array -- which is how Alkamos
+   reaches Soulrend, through lt_melee2h_d02_alkamos. Reading only lootName left
+   every such wrapper looking empty.
+   The array arrives as one field per element. A .dbr text export joins the same
+   values with semicolons instead, so split on those too rather than depending
+   on which encoding produced the record. */
 static int scan_loot_table(gd_inference *inference, const gd_record *record,
                            gd_error *err)
 {

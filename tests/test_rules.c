@@ -317,14 +317,17 @@ static void monster_infrequent_cases(void)
                                      "records/items/loottables/mastertables/mt_pool.dbr",&err);
     if(table==NULL)++failures; else table->creature_refs=50;
 
-    /* A LevelTable names its children in one semicolon-separated field. */
+    /* A LevelTable's `records` string array arrives as one field per element;
+       a .dbr text export joins them with semicolons instead. Both must read. */
     {
         gd_record rec;
-        gd_field f;
+        gd_field f,f2;
+        f2.key="records";
+        f2.value="records/items/loottables/tdyn_lvl_a.dbr";
+        f2.next=NULL;
         f.key="records";
-        f.value="records/items/loottables/tdyn_lvl_a.dbr;"
-                "records/items/loottables/tdyn_lvl_b.dbr";
-        f.next=NULL;
+        f.value="records/items/loottables/tdyn_lvl_b.dbr";
+        f.next=&f2;
         rec.id="records/items/loottables/lt_level.dbr";
         rec.fields=&f;
         if(!scan_loot_table_for_test(&inference,&rec,&err))++failures;
@@ -332,10 +335,17 @@ static void monster_infrequent_cases(void)
                                        "records/items/loottables/lt_level.dbr");
         if(table==NULL||table->entries==NULL||table->entries->next==NULL||
            table->entries->next->next!=NULL)++failures;
-        else if(strcmp(table->entries->next->item_path,
-                       "records/items/loottables/tdyn_lvl_a.dbr")!=0||
-                strcmp(table->entries->item_path,
-                       "records/items/loottables/tdyn_lvl_b.dbr")!=0)++failures;
+        else{
+            int seen_a=0,seen_b=0;
+            gd_loot_entry *e;
+            for(e=table->entries;e!=NULL;e=e->next){
+                if(strcmp(e->item_path,
+                          "records/items/loottables/tdyn_lvl_a.dbr")==0)++seen_a;
+                if(strcmp(e->item_path,
+                          "records/items/loottables/tdyn_lvl_b.dbr")==0)++seen_b;
+            }
+            if(seen_a!=1||seen_b!=1)++failures;
+        }
     }
 
     gd_inference_finish(&inference,&err);

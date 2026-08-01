@@ -203,21 +203,29 @@ static int parse_fields(gd_arz *db, const gd_u8 *data, size_t length,
         bytes = (size_t)count * 4;
         if (kind > 3 || key >= db->string_count || bytes > length - pos)
             goto invalid;
-        if (kind == 2 && count == 1) {
-            gd_u32 value = mem_u32(data + pos);
-            gd_field *field;
-            if (value >= db->string_count) goto invalid;
-            field = (gd_field *)gd_alloc(sizeof(*field), err);
-            if (field == NULL) return 0;
-            field->key = gd_strdup(db->strings[key], err);
-            field->value = gd_strdup(db->strings[value], err);
-            field->next = NULL;
-            if (field->key == NULL || field->value == NULL) {
-                free(field->key); free(field->value); free(field);
-                return 0;
+        /* String fields can hold an array. A LevelTable names the tables it
+           selects among in one `records` field carrying several string indexes,
+           and dropping anything with count > 1 lost those references entirely.
+           Emit one field per value; gd_record_field still answers with the
+           first, so single-valued readers are unaffected. */
+        if (kind == 2) {
+            gd_u16 v;
+            for (v = 0; v < count; ++v) {
+                gd_u32 value = mem_u32(data + pos + (size_t)v * 4);
+                gd_field *field;
+                if (value >= db->string_count) goto invalid;
+                field = (gd_field *)gd_alloc(sizeof(*field), err);
+                if (field == NULL) return 0;
+                field->key = gd_strdup(db->strings[key], err);
+                field->value = gd_strdup(db->strings[value], err);
+                field->next = NULL;
+                if (field->key == NULL || field->value == NULL) {
+                    free(field->key); free(field->value); free(field);
+                    return 0;
+                }
+                *tail = field;
+                tail = &field->next;
             }
-            *tail = field;
-            tail = &field->next;
         }
         pos += bytes;
     }
