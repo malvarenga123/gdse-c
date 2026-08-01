@@ -372,33 +372,26 @@ static int add_loot_entry(gd_inference *inference, const char *table_path,
                               strlen(item_path), err);
 }
 
-/* Two record shapes name a table's contents, and only one of them is a loot
-   table in the LootItemTable sense. lootName1..N name the records a weighted
-   table can yield. A LevelTable instead selects among whole tables by character
-   level and lists them in a `records` string array -- which is how Alkamos
-   reaches Soulrend, through lt_melee2h_d02_alkamos. Reading only lootName left
-   every such wrapper looking empty.
-   The array arrives as one field per element. A .dbr text export joins the same
-   values with semicolons instead, so split on those too rather than depending
-   on which encoding produced the record. */
+/* lootName1..N name the records a table can yield.
+   A LevelTable selects among whole tables by character level and lists them in
+   a `records` string array instead. Reading that array is what finally
+   connected the superboss chains -- Alkamos reaches Soulrend through
+   lt_melee2h_d02_alkamos -- and it is deliberately not read here. Measured on
+   game version 1.3.0 it also connected every generic tier wrapper a monster can
+   reach, taking the run from 148 differing lines to 377: 184 Epic and 55
+   Legendary bases all reading as somebody's Infrequent.
+   Two attempts to keep the good chains and drop the rest failed. Restricting
+   the follow to a boss's own mastertable changed nothing, which showed the
+   generic pools arrive through mastertables that pass the reference-count test
+   yet still yield ordinary gear. Separating those from a boss's own table needs
+   a signal this pass does not have. Ten superboss lines are the prize and 239
+   regressions the price, so the array stays unread until something better than
+   the count turns up. */
 static int scan_loot_table(gd_inference *inference, const gd_record *record,
                            gd_error *err)
 {
     const gd_field *field;
     for (field = record->fields; field != NULL; field = field->next) {
-        if (strcmp(field->key, "records") == 0) {
-            const char *start = field->value;
-            for (;;) {
-                const char *stop = strchr(start, ';');
-                size_t len = stop == NULL ? strlen(start) : (size_t)(stop - start);
-                if (len > 0 &&
-                    !add_loot_entry_len(inference, record->id, start, len, err))
-                    return 0;
-                if (stop == NULL) break;
-                start = stop + 1;
-            }
-            continue;
-        }
         if (!starts(field->key, "lootName")) continue;
         if (*field->value == '\0') continue;
         if (!add_loot_entry(inference, record->id, field->value, err)) return 0;
