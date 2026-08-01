@@ -572,27 +572,34 @@ void gd_inference_finish(gd_inference *inference, gd_error *err)
        1 creature against 50. */
     for (table = inference->loot_tables; table != NULL; table = table->next) {
         if (table->creature_refs == 0) continue;
-        if (!is_shared_pool(table)) table->monster_drop = 1;
+        if (is_shared_pool(table)) continue;
+        table->monster_drop = 1;
+        /* Only a boss's own mastertable is followed onward. A creature also
+           names generic tables for the gear it wields -- a LevelTable covering
+           every Epic sword of its class, say -- and those expand into the whole
+           high-tier pool. Their direct contents still count, which is what
+           reaches an Infrequent a monster names outright. */
+        if (strstr(table->path, "/loottables/mastertables/") != NULL)
+            table->expandable = 1;
     }
-    /* Loot tables nest. A creature names a table whose entries are further
-       tables holding the actual items, and the items behind those wrappers are
-       Infrequents just the same: Alkamos reaches Soulrend through
-       mt_gearweaponsmelee2h_d02_alkamos -> lt_melee2h_d02_alkamos ->
-       tdyn_melee2h_d02_alkamos. Spread the mark to a fixed point before
-       resolving items, stopping at any table shared widely enough to be a
-       world pool -- one nested reference into one of those would undo the
-       whole distinction. */
+    /* A boss's mastertable is a wrapper: its entries are further tables, and
+       the items behind them are its Infrequents just the same. Alkamos reaches
+       Soulrend through mt_gearweaponsmelee2h_d02_alkamos ->
+       lt_melee2h_d02_alkamos -> tdyn_melee2h_d02_alkamos.
+       Spread the mark to a fixed point, following only what a wrapper leads to
+       and stopping at any table shared widely enough to be a world pool. */
     for (;;) {
         int changed = 0;
         for (table = inference->loot_tables; table != NULL; table = table->next) {
             gd_loot_entry *entry;
-            if (!table->monster_drop) continue;
+            if (!table->expandable) continue;
             for (entry = table->entries; entry != NULL; entry = entry->next) {
                 gd_loot_table *nested =
                     find_loot_table(inference, entry->item_path);
-                if (nested == NULL || nested->monster_drop) continue;
+                if (nested == NULL || nested->expandable) continue;
                 if (is_shared_pool(nested)) continue;
                 nested->monster_drop = 1;
+                nested->expandable = 1;
                 changed = 1;
             }
         }

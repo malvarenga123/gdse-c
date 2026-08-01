@@ -59,6 +59,7 @@ typedef struct gd_loot_table {
     unsigned long creature_refs;
     unsigned long ref_serial;
     int monster_drop;
+    int expandable;
     struct gd_loot_table *next;
     struct gd_loot_table *hash_next;
 } gd_loot_table;

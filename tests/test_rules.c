@@ -276,7 +276,7 @@ static void monster_infrequent_cases(void)
                                 &err))++failures;
     table=ensure_loot_table_for_test(&inference,
                                      "records/items/loottables/lt_nested.dbr",&err);
-    if(table==NULL)++failures; else table->monster_drop=1;
+    if(table==NULL)++failures; else {table->monster_drop=1;table->expandable=1;}
     /* Named by far more creatures than any one monster's own table: a shared
        world pool, and the nesting must stop at it. */
     table=ensure_loot_table_for_test(&inference,
@@ -316,6 +316,24 @@ static void monster_infrequent_cases(void)
     table=ensure_loot_table_for_test(&inference,
                                      "records/items/loottables/mastertables/mt_pool.dbr",&err);
     if(table==NULL)++failures; else table->creature_refs=50;
+
+    /* A creature also names generic tables for the gear it wields. Those are
+       wrappers over the whole tier and must not be followed, or every Epic in
+       the game reads as somebody's Infrequent. */
+    t=gd_inference_ensure_tag(&inference,"tagWorldEpic",&err);
+    t->kind=GD_ITEM; t->item_present=1; t->gear=1; ++t->counts[GD_EPIC];
+    if(!add_item_path_for_test(&inference,"records/items/w/worldepic.dbr",
+                               "tagWorldEpic",&err))++failures;
+    if(!add_loot_entry_for_test(&inference,
+                                "records/items/loottables/tdyn_epic_pool.dbr",
+                                "records/items/w/worldepic.dbr",&err))++failures;
+    if(!add_loot_entry_for_test(&inference,
+                                "records/items/loottables/lt_wielded_c01.dbr",
+                                "records/items/loottables/tdyn_epic_pool.dbr",
+                                &err))++failures;
+    table=ensure_loot_table_for_test(&inference,
+                                     "records/items/loottables/lt_wielded_c01.dbr",&err);
+    if(table==NULL)++failures; else table->creature_refs=1;
 
     /* A LevelTable's `records` string array arrives as one field per element;
        a .dbr text export joins them with semicolons instead. Both must read. */
@@ -365,6 +383,8 @@ static void monster_infrequent_cases(void)
     if(gd_tag_color(&inference,"tagFamilyDrop",1)!='l')++failures;
     if(gd_tag_color(&inference,"tagBossOwn",1)!='l')++failures;
     if(gd_tag_color(&inference,"tagPoolDrop",1)!='g')++failures;
+    /* Two hops behind a creature-named wield table: an ordinary Epic. */
+    if(gd_tag_color(&inference,"tagWorldEpic",1)!='b')++failures;
     /* gdse's own scheme never emits MI colors. */
     if(gd_tag_color(&inference,"tagYetiHorn",0)!='g')++failures;
     if(gd_tag_color(&inference,"tagBossBlade",0)!=0)++failures;
