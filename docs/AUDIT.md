@@ -193,6 +193,23 @@ base head and shield names, monster torsos, and faction shoulders/torsos without
 touching their description tags. Those rules remove 13 more lines, leaving a
 projected **16 differences**.
 
+The following output contained **19 differences** rather than 16. The broad
+shield-family fallback colored `Riot Shield` and the second `Targe`, which Full
+Rainbow deliberately leaves plain, while `Ragged Tunic` remained uncolored
+because it has an item record with unknown classification rather than no record
+at all. The fallback now applies to unknown-classification family members too,
+and the inconsistent shield family is no longer generalized. This trades the
+two false shield colors for the still-unresolved `tagShieldA011` and correctly
+colors `Ragged Tunic`.
+
+The record export also corrects the earlier `Broken` conclusion: only the odd
+Arcane staff tags (`A001`, `A003`, `A005`, `A007`) own `Broken` enemy-gear
+records; the even tags have no records. Tracking `Broken` without treating it
+as an affixable Common rarity therefore fixes all four intended white names and
+does not color the three intervening names. Coloring the explicit localization
+test category fixes `Gazer Man`. Together these changes project to **12
+differences**.
+
 The original 7 false positives are irreducible. `Gutworm's Bloody Seal`, `Razorback's Spined Mantle`, `Bernard's Slightly-Chewed Buckler`, `Leander Greene's Hand Cannon`, `Bloodreaper's Cleaver`, `Reddan Memento Ring` and `Skinner's Torch` are all genuine named-monster drops that Full Rainbow's hand-maintained list happens not to paint. `Scythe of Tenebris` is the same kind of omission exposed by the specialized traversal. Nothing in the database distinguishes them from the Infrequents Full Rainbow does paint.
 
 The tier collision is also irreducible: `tagHeadC034` and `tagHeadC034B` are the same helm at two tiers, Full Rainbow paints them `{^Z}` and `{^B}`, and gdse reads no field that separates them.

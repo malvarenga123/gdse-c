@@ -32,6 +32,7 @@ typedef struct gd_tag {
     unsigned long name_records;
     int name_part;
     int monster_infrequent;
+    int broken_item;
     struct gd_tag *next;
     struct gd_tag *hash_next;
 } gd_tag;

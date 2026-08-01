@@ -545,6 +545,11 @@ int gd_infer_database(gd_inference *inference, gd_arz *db, gd_error *err)
                 tag->item_present = 1;
                 if (starts(record.id, "records/items/faction/")) tag->faction = 1;
                 ++tag->counts[(int)rank];
+            } else if (rarity_text != NULL &&
+                       strcmp(rarity_text, "Broken") == 0) {
+                tag->kind = GD_ITEM;
+                tag->item_present = 1;
+                tag->broken_item = 1;
             }
         }
         gd_record_free(&record);
@@ -728,6 +733,7 @@ static char full_rainbow_tag_color(const char *name)
     size_t len = strlen(name);
     if (strcmp(name, "tagStyleUniqueTier2") == 0) return 'a';
     if (strcmp(name, "tagStyleUniqueTier3") == 0) return 'p';
+    if (strcmp(name, "tagItemTest") == 0) return 'f';
     if (starts(name, "tagQuestItem") &&
         !(len >= 4 && strcmp(name + len - 4, "Desc") == 0)) return 'g';
     return 0;
@@ -741,7 +747,7 @@ static char full_rainbow_missing_tag_color(const char *name)
 {
     static const char *silver[] = {"tagQualityWeaponWood"};
     static const char *green[] = {"tagShoulderF", "tagTorsoF"};
-    static const char *white[] = {"tagHeadA", "tagShieldA", "tagTorsoM"};
+    static const char *white[] = {"tagHeadA", "tagTorsoM"};
     size_t i;
     for (i = 0; i < sizeof(silver) / sizeof(silver[0]); ++i)
         if (starts(name, silver[i]) &&
@@ -766,6 +772,9 @@ static char tag_color_of(const gd_tag *tag, const char *name,
     if (tag == NULL)
         return full_rainbow ? full_rainbow_missing_tag_color(name) : 0;
     if (full_rainbow) {
+        char missing_color = full_rainbow_missing_tag_color(name);
+        if (tag->rarity == GD_UNKNOWN && missing_color) return missing_color;
+        if (tag->rarity == GD_UNKNOWN && tag->broken_item) return 'w';
         if (tag->name_part) return 's';
         /* Monster Infrequents take their own colors at every tier. */
         if (tag->monster_infrequent) {
