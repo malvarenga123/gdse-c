@@ -10,6 +10,14 @@ unless the repository documents a different versioning policy.
 
 ### Added
 
+- Added a `--full-rainbow` option that widens the item color scheme toward the
+  Rainbow Filter mod: Epic and Legendary names are colored instead of left to
+  the engine, set-item names are marked with `(S) `, faction gear is colored by
+  its rarity, style/quality words are painted silver rather than taking the
+  base name's white, and Monster Infrequents take their own colors. Every
+  category is derived from the game database; none uses a hand-maintained list.
+  Measured against the mod's distributed file on game version 1.3.0, 148 of
+  roughly 4,500 lines still differ, none of them in text.
 - Added ISO C89 builds with POSIX `make`, including vendored LZ4 and utf8proc
   dependencies so builds do not need to download third-party packages.
 - Added native MinGW32 and MSYS2 build support for Windows.
@@ -45,6 +53,8 @@ unless the repository documents a different versioning policy.
 - Fixed item, affix, style, and quality tag inference so shared tags, unknown
   item classifications, rarity ties, faction items, and affixable name parts
   receive the intended colors.
+- Fixed ARZ record decoding dropping every string field that holds an array
+  rather than a single value. Arrays now decode as one field per element.
 - Fixed color insertion for bracket placeholders, numeric pipe placeholders,
   existing color markers, and non-ASCII text, including bounds and allocation
   error handling for large values.

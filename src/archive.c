@@ -12,6 +12,7 @@ struct gd_arz {
     gd_u32 *record_offsets;
     char **strings;
     gd_u32 string_count;
+    int scan_creatures;
 };
 
 struct gd_arc {
@@ -168,6 +169,11 @@ void gd_arz_close(gd_arz *db)
 
 gd_u32 gd_arz_count(const gd_arz *db) { return db->record_count; }
 
+void gd_arz_scan_creatures(gd_arz *db, int enabled)
+{
+    db->scan_creatures = enabled;
+}
+
 static gd_u16 mem_u16(const gd_u8 *p)
 {
     return (gd_u16)((gd_u16)p[0] | ((gd_u16)p[1] << 8));
@@ -197,21 +203,29 @@ static int parse_fields(gd_arz *db, const gd_u8 *data, size_t length,
         bytes = (size_t)count * 4;
         if (kind > 3 || key >= db->string_count || bytes > length - pos)
             goto invalid;
-        if (kind == 2 && count == 1) {
-            gd_u32 value = mem_u32(data + pos);
-            gd_field *field;
-            if (value >= db->string_count) goto invalid;
-            field = (gd_field *)gd_alloc(sizeof(*field), err);
-            if (field == NULL) return 0;
-            field->key = gd_strdup(db->strings[key], err);
-            field->value = gd_strdup(db->strings[value], err);
-            field->next = NULL;
-            if (field->key == NULL || field->value == NULL) {
-                free(field->key); free(field->value); free(field);
-                return 0;
+        /* String fields can hold an array. A LevelTable names the tables it
+           selects among in one `records` field carrying several string indexes,
+           and dropping anything with count > 1 lost those references entirely.
+           Emit one field per value; gd_record_field still answers with the
+           first, so single-valued readers are unaffected. */
+        if (kind == 2) {
+            gd_u16 v;
+            for (v = 0; v < count; ++v) {
+                gd_u32 value = mem_u32(data + pos + (size_t)v * 4);
+                gd_field *field;
+                if (value >= db->string_count) goto invalid;
+                field = (gd_field *)gd_alloc(sizeof(*field), err);
+                if (field == NULL) return 0;
+                field->key = gd_strdup(db->strings[key], err);
+                field->value = gd_strdup(db->strings[value], err);
+                field->next = NULL;
+                if (field->key == NULL || field->value == NULL) {
+                    free(field->key); free(field->value); free(field);
+                    return 0;
+                }
+                *tail = field;
+                tail = &field->next;
             }
-            *tail = field;
-            tail = &field->next;
         }
         pos += bytes;
     }
@@ -246,7 +260,11 @@ int gd_arz_record(gd_arz *db, gd_u32 index, gd_record *record, gd_error *err)
     }
     record->id = gd_strdup(db->strings[string_index], err);
     if (record->id == NULL) return 0;
-    if (strncmp(record->id, "records/items/", 14) != 0) return 1;
+    /* Only records the inference pass can use are worth decompressing. Creature
+       records are read only when Monster Infrequent inference asks for them. */
+    if (strncmp(record->id, "records/items/", 14) != 0 &&
+        !(db->scan_creatures &&
+          strncmp(record->id, "records/creatures/", 18) == 0)) return 1;
     if (compressed_len > 256UL * 1024UL * 1024UL ||
         uncompressed_len > 256UL * 1024UL * 1024UL ||
         !gd_seek(db->file, offset + 24UL, err)) goto fail;

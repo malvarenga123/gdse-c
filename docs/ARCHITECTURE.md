@@ -19,8 +19,8 @@ flowchart LR
 ## Components and dependencies
 
 - `src/main.c` is the composition root. It parses options, enforces mandatory/optional input policy, stages a complete output set, lets a later archive replace an earlier staged destination, writes the ownership manifest, and publishes with backup/rollback.
-- `src/archive.c` implements the required version-3 `.arz` and `.arc` readers. It validates sizes and indexes, uses vendored LZ4 for payloads, and resolves one record at a time rather than collecting raw/resolved record vectors.
-- `src/rules.c` accumulates inference state in dynamically resized hash indexes, deduplicates identical part/base relationships, resolves modal rarity ties toward the lower tier, maps property tags, preserves Unicode alphabetic handling through utf8proc, and rewrites localization lines.
+- `src/archive.c` implements the required version-3 `.arz` and `.arc` readers. It validates sizes and indexes, uses vendored LZ4 for payloads, and resolves one record at a time rather than collecting raw/resolved record vectors. String fields may hold an array, which is decoded as one field per element; `gd_record_field` answers with the first, so readers expecting a single value are unaffected.
+- `src/rules.c` accumulates inference state in dynamically resized hash indexes, deduplicates identical part/base relationships, resolves modal rarity ties toward the lower tier, maps property tags, preserves Unicode alphabetic handling through utf8proc, and rewrites localization lines. It carries two item color models: gdse's own, which colors only names that can take a name-altering affix, and `--full-rainbow`, which colors every modeled rarity, marks set items, includes faction gear, paints style/quality words silver, and colors Monster Infrequents by resolving monster drop slots through loot tables back to item tags, keeping only the Rare-and-above results so a monster's own worn gear is not mistaken for its Infrequent. Shared world-drop pools are excluded by their `loottables/mastertables/` path, except for the few records there that only one or two creatures name, which are a single boss's own table.
 - `src/util.c` contains checked allocation, little-endian reads, directory creation, joins, and archive-path containment checks.
 - `src/gdse.h` is an internal interface; this executable exposes no supported library ABI.
 - `vendor/lz4` and `vendor/utf8proc` are isolated third-party implementations with included licenses.
@@ -28,9 +28,9 @@ flowchart LR
 
 ## Control and data flow
 
-1. The CLI parses the optional positional `GRIM_DAWN_INSTALL_PATH` and remaining options; it defaults the install path to the current directory, the language to English, and Rainbow Filter damage colors to enabled, then validates the selected directory and its mandatory inputs.
+1. The CLI parses the optional positional `GRIM_DAWN_INSTALL_PATH` and remaining options; it defaults the install path to the current directory, the language to English, Rainbow Filter damage colors to enabled, and the wider Rainbow Filter item scheme (`--full-rainbow`) to disabled, then validates the selected directory and its mandatory inputs.
 2. The base database is mandatory. DLC databases are skipped only if absent; malformed or unreadable existing databases fail the run.
-3. ARZ record offsets and the string table are indexed once. Relevant item records are decompressed individually and folded into hash-indexed inference state, bounding transient payload memory to one record while keeping tag insertion and lookup amortized constant-time.
+3. ARZ record offsets and the string table are indexed once. Relevant item records are decompressed individually and folded into hash-indexed inference state, bounding transient payload memory to one record while keeping tag insertion and lookup amortized constant-time. `--full-rainbow` additionally decompresses `records/creatures/` — about 5,200 records against the item subtree's tens of thousands — to recover which loot tables monsters drop from; without the flag those records are skipped on their id alone.
 4. The base requested-language ARC is mandatory. DLC archives follow the same absent-versus-broken policy.
 5. Relevant tag files are decoded as byte-preserving UTF-8 text and rewritten. Existing line separators are normalized to Windows CRLF, while a missing final newline remains missing. Invalid UTF-8 bytes are retained; utf8proc is used only to decide whether a plain value contains a Unicode letter.
 6. Every output is first written beneath a sibling staging path. Absolute, parent-traversing, or empty path components are rejected before publication; when archives contain the same destination, the later archive replaces the earlier staged output.
@@ -39,6 +39,8 @@ flowchart LR
 ## Compatibility and limitations
 
 - Inline color markers retain the four-byte `{^X}` format and the Rust implementation's placement ordering.
+- `--full-rainbow` derives every category it covers from the database and carries no per-item table: `itemClassification`, `itemSetName`, the faction record path and the style/quality tag fields for the item categories, and monster drop-slot references resolved through loot tables for Monster Infrequents.
+- `--full-rainbow` reproduces the Rainbow Filter scheme closely but not exactly. Measured against the distributed file on game version 1.3.0, 148 of roughly 4,500 lines differ and none of them differ in text. Most are entries absent from that mod's hand-maintained list; the derivable remainder is 15 superboss Infrequents whose loot chain passes through a wrapper that cannot be told from a generic one. `docs/AUDIT.md` records the full accounting.
 - Supported ARZ and ARC format version is 3, matching the former `lib_gddb` dependency.
 - Full-directory atomic replacement is intentionally avoided because output may coexist with unrelated files. Individual renames are atomic where the filesystem provides that guarantee; the backup rollback protects multi-file publication failures on a best-effort basis.
 - Real game archives, Windows behavior, non-English archives, and crash injection during filesystem publication remain unverified in this checkout.
