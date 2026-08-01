@@ -264,7 +264,7 @@ static void monster_infrequent_cases(void)
                                 "records/items/loottables/tdyn_deep.dbr",
                                 &err))++failures;
     if(!add_loot_entry_for_test(&inference,
-                                "records/items/loottables/mt_all.dbr",
+                                "records/items/loottables/mastertables/mt_all.dbr",
                                 "records/items/w/world.dbr",&err))++failures;
     if(!add_loot_entry_for_test(&inference,
                                 "records/items/loottables/lt_nested.dbr",
@@ -272,7 +272,7 @@ static void monster_infrequent_cases(void)
                                 &err))++failures;
     if(!add_loot_entry_for_test(&inference,
                                 "records/items/loottables/lt_nested.dbr",
-                                "records/items/loottables/mt_all.dbr",
+                                "records/items/loottables/mastertables/mt_all.dbr",
                                 &err))++failures;
     table=ensure_loot_table_for_test(&inference,
                                      "records/items/loottables/lt_nested.dbr",&err);
@@ -280,27 +280,41 @@ static void monster_infrequent_cases(void)
     /* Named by far more creatures than any one monster's own table: a shared
        world pool, and the nesting must stop at it. */
     table=ensure_loot_table_for_test(&inference,
-                                     "records/items/loottables/mt_all.dbr",&err);
+                                     "records/items/loottables/mastertables/mt_all.dbr",&err);
     if(table==NULL)++failures; else table->creature_refs=GD_SHARED_TABLE_REFS+1;
-    /* Seeding from the creature reference count, rather than from a path: one
-       creature names its own table, dozens name a world pool. */
-    t=gd_inference_ensure_tag(&inference,"tagOwnDrop",&err);
+    /* A monster family names its own table from every variant record it has,
+       so a high count outside the mastertables layer means nothing. */
+    t=gd_inference_ensure_tag(&inference,"tagFamilyDrop",&err);
     t->kind=GD_ITEM; t->item_present=1; t->gear=1; ++t->counts[GD_RARE];
-    if(!add_item_path_for_test(&inference,"records/items/w/own.dbr",
-                               "tagOwnDrop",&err))++failures;
+    if(!add_item_path_for_test(&inference,"records/items/w/family.dbr",
+                               "tagFamilyDrop",&err))++failures;
+    if(!add_loot_entry_for_test(&inference,
+                                "records/items/loottables/t_family.dbr",
+                                "records/items/w/family.dbr",&err))++failures;
+    table=ensure_loot_table_for_test(&inference,
+                                     "records/items/loottables/t_family.dbr",&err);
+    if(table==NULL)++failures; else table->creature_refs=40;
+    /* Inside that layer the count is what separates one boss's own table from
+       a world pool. */
+    t=gd_inference_ensure_tag(&inference,"tagBossOwn",&err);
+    t->kind=GD_ITEM; t->item_present=1; t->gear=1; ++t->counts[GD_RARE];
+    if(!add_item_path_for_test(&inference,"records/items/w/bossown.dbr",
+                               "tagBossOwn",&err))++failures;
     t=gd_inference_ensure_tag(&inference,"tagPoolDrop",&err);
     t->kind=GD_ITEM; t->item_present=1; t->gear=1; ++t->counts[GD_RARE];
     if(!add_item_path_for_test(&inference,"records/items/w/pool.dbr",
                                "tagPoolDrop",&err))++failures;
-    if(!add_loot_entry_for_test(&inference,"records/items/loottables/t_own.dbr",
-                                "records/items/w/own.dbr",&err))++failures;
-    if(!add_loot_entry_for_test(&inference,"records/items/loottables/t_pool.dbr",
+    if(!add_loot_entry_for_test(&inference,
+                                "records/items/loottables/mastertables/mt_boss.dbr",
+                                "records/items/w/bossown.dbr",&err))++failures;
+    if(!add_loot_entry_for_test(&inference,
+                                "records/items/loottables/mastertables/mt_pool.dbr",
                                 "records/items/w/pool.dbr",&err))++failures;
     table=ensure_loot_table_for_test(&inference,
-                                     "records/items/loottables/t_own.dbr",&err);
+                                     "records/items/loottables/mastertables/mt_boss.dbr",&err);
     if(table==NULL)++failures; else table->creature_refs=1;
     table=ensure_loot_table_for_test(&inference,
-                                     "records/items/loottables/t_pool.dbr",&err);
+                                     "records/items/loottables/mastertables/mt_pool.dbr",&err);
     if(table==NULL)++failures; else table->creature_refs=50;
 
     /* A LevelTable names its children in one semicolon-separated field. */
@@ -336,8 +350,10 @@ static void monster_infrequent_cases(void)
     if(gd_tag_color(&inference,"tagNestedClaw",1)!='z')++failures;
     /* Behind a shared pool the nesting must not follow: an ordinary Rare. */
     if(gd_tag_color(&inference,"tagWorldRare",1)!='g')++failures;
-    /* Seeded by reference count alone, with no monster_drop set by hand. */
-    if(gd_tag_color(&inference,"tagOwnDrop",1)!='l')++failures;
+    /* Seeded without any monster_drop set by hand: a family table survives its
+       own variant count, a boss's mastertable is admitted, a pool is not. */
+    if(gd_tag_color(&inference,"tagFamilyDrop",1)!='l')++failures;
+    if(gd_tag_color(&inference,"tagBossOwn",1)!='l')++failures;
     if(gd_tag_color(&inference,"tagPoolDrop",1)!='g')++failures;
     /* gdse's own scheme never emits MI colors. */
     if(gd_tag_color(&inference,"tagYetiHorn",0)!='g')++failures;

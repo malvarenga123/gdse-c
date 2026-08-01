@@ -337,6 +337,17 @@ static gd_loot_table *ensure_loot_table(gd_inference *inference,
     return table;
 }
 
+/* A world-drop pool: filed in the shared mastertables layer, and not one of the
+   few records there that a single boss claims for itself. A mastertable no
+   creature names directly counts as shared, so nesting cannot wander into the
+   pooling layer sideways. */
+static int is_shared_pool(const gd_loot_table *table)
+{
+    if (strstr(table->path, "/loottables/mastertables/") == NULL) return 0;
+    return !(table->creature_refs >= 1 &&
+             table->creature_refs <= GD_SHARED_TABLE_REFS);
+}
+
 static int add_loot_entry_len(gd_inference *inference, const char *table_path,
                               const char *item_path, size_t len, gd_error *err)
 {
@@ -546,15 +557,19 @@ void gd_inference_finish(gd_inference *inference, gd_error *err)
         tag->affixable = tag->gear && !tag->faction && best >= 0 && best <= GD_RARE;
         tag->set_item = tag->set_records * 2 > tag->name_records;
     }
-    /* A table named by one or a few creatures belongs to those creatures; one
-       named by dozens is a pool the whole world rolls from. The two populations
-       are far apart and the directory a table lives in does not separate them:
-       mt_accessories_rings_d02_alkamos sits beside mt_accessories_rings_d01,
-       same family and same tier, at 1 creature against 50. */
+    /* mastertables/ is the shared pooling layer, and a table a creature names
+       outside it belongs to that creature. The reference count is not a general
+       replacement for that structure: a monster family has one creature record
+       per variant and difficulty, so dozens of yetis name the one yeti table,
+       and judging by count alone throws it away.
+       Within mastertables/ the count does separate the exceptions. A few of
+       those records are one boss's own table rather than a world pool, and they
+       are not distinguishable by name or family --
+       mt_accessories_rings_d02_alkamos sits beside mt_accessories_rings_d01, at
+       1 creature against 50. */
     for (table = inference->loot_tables; table != NULL; table = table->next) {
-        if (table->creature_refs > 0 &&
-            table->creature_refs <= GD_SHARED_TABLE_REFS)
-            table->monster_drop = 1;
+        if (table->creature_refs == 0) continue;
+        if (!is_shared_pool(table)) table->monster_drop = 1;
     }
     /* Loot tables nest. A creature names a table whose entries are further
        tables holding the actual items, and the items behind those wrappers are
@@ -573,7 +588,7 @@ void gd_inference_finish(gd_inference *inference, gd_error *err)
                 gd_loot_table *nested =
                     find_loot_table(inference, entry->item_path);
                 if (nested == NULL || nested->monster_drop) continue;
-                if (nested->creature_refs > GD_SHARED_TABLE_REFS) continue;
+                if (is_shared_pool(nested)) continue;
                 nested->monster_drop = 1;
                 changed = 1;
             }

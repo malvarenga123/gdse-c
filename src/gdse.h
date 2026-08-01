@@ -63,11 +63,14 @@ typedef struct gd_loot_table {
     struct gd_loot_table *hash_next;
 } gd_loot_table;
 
-/* A table named by more than this many creatures is a shared pool. Measured on
-   game version 1.3.0, the two populations do not overlap or even approach each
-   other: the shared pools sit at 50, 50, 82 and 90 creatures, while a boss's
-   own table sits at 1. Any cut inside that gap gives the same answer; this one
-   leaves room for a boss with a few difficulty or nemesis variants. */
+/* Separates the two kinds of record filed under loottables/mastertables/: the
+   world-drop pools, and the few that are one boss's own table. Measured on game
+   version 1.3.0 the populations are far apart -- pools at 50, 50, 82 and 90
+   creatures, Alkamos' two at 1 -- and any cut inside that gap gives the same
+   answer; this one leaves room for a boss with a few difficulty variants.
+   It does not generalize outside mastertables/. A monster family has one
+   creature record per variant, so dozens of yetis name the single yeti table,
+   and counting alone would discard it. */
 #define GD_SHARED_TABLE_REFS 8
 
 typedef struct gd_part {
