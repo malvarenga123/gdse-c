@@ -32,6 +32,8 @@ typedef struct gd_tag {
     unsigned long name_records;
     int name_part;
     int monster_infrequent;
+    int broken_item;
+    gd_rarity full_rainbow_rarity;
     struct gd_tag *next;
     struct gd_tag *hash_next;
 } gd_tag;
@@ -44,6 +46,12 @@ typedef struct gd_item_path {
     struct gd_item_path *next;
     struct gd_item_path *hash_next;
 } gd_item_path;
+
+typedef struct gd_craft_path {
+    char *path;
+    gd_rarity rarity;
+    struct gd_craft_path *next;
+} gd_craft_path;
 
 typedef struct gd_loot_entry {
     char *item_path;
@@ -59,6 +67,7 @@ typedef struct gd_loot_table {
     unsigned long creature_refs;
     unsigned long ref_serial;
     int monster_drop;
+    int expansion_chest_drop;
     int expandable;
     struct gd_loot_table *next;
     struct gd_loot_table *hash_next;
@@ -86,6 +95,7 @@ typedef struct gd_inference {
     gd_tag *tags;
     gd_part *parts;
     gd_item_path *item_paths;
+    gd_craft_path *craft_paths;
     gd_loot_table *loot_tables;
     gd_tag **tag_buckets;
     gd_part **part_buckets;
@@ -155,6 +165,10 @@ gd_loot_table *find_loot_table_for_test(const gd_inference *inference,
                                         const char *path);
 int scan_loot_table_for_test(gd_inference *inference, const gd_record *record,
                              gd_error *err);
+int scan_loot_chest_for_test(gd_inference *inference, const gd_record *record,
+                             gd_error *err);
+int add_craft_path_for_test(gd_inference *inference, const char *path,
+                            gd_rarity rank, gd_error *err);
 gd_tag *gd_inference_ensure_tag(gd_inference *inference, const char *name,
                                 gd_error *err);
 int gd_inference_add_part(gd_inference *inference, const char *part,

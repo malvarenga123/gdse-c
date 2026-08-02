@@ -41,7 +41,21 @@ The build produces `gdse.exe`. Windows-specific filesystem and 64-bit seek calls
 
 Run gdse from the Grim Dawn installation directory, or pass `GRIM_DAWN_INSTALL_PATH` as the optional first positional argument. When omitted, the path defaults to the current directory; gdse reports a missing required database when that directory is not a Grim Dawn installation. English (`en`) is the default language. The base database and requested base language archive are required. DLC files are optional when absent, but gdse fails rather than silently ignoring an existing unreadable or corrupt file. The default destination is `GRIM_DAWN_INSTALL_PATH/settings/text_<language>`.
 
-`--full-rainbow` widens the item scheme to match the Rainbow Filter mod more closely: Epic and Legendary names are colored rather than left to the engine, set-item names gain Rainbow Filter's `(S) ` marker, faction gear is colored by its rarity, and style/quality words (`Tarnished`, `Reinforced`) take silver instead of the base name's white, and Monster Infrequents take their own colors. A Monster Infrequent is identified from the database: an item is one when a monster record names, in one of its own drop slots, a loot table containing that item.
+`--full-rainbow` widens the item scheme to match the Rainbow Filter mod more closely: Epic and Legendary names are colored rather than left to the engine, set-item names gain Rainbow Filter's `(S) ` marker, faction gear is colored by its rarity, style/quality words (`Tarnished`, `Reinforced`) take silver instead of the base name's white, and Monster Infrequents take their own colors. A Monster Infrequent is identified from the database: an item is one when a monster record names, in one of its own drop slots, a loot table containing that item.
+
+This option intentionally reproduces the scheme rather than the distributed
+`tags_items.txt` byte for byte. gdse derives colors from the installed game
+database, while Full Rainbow's file is a hand-maintained tag list. On game
+version 1.3.0 the original inference left 149 color-only differences among
+roughly 4,500 lines. Generic exclusions for random-crafting labels and Loyalist
+illusion equipment account for 103 of those. Specialized loot-chain traversal
+and localization-category rules reduce the latest supplied comparisons to 12
+base, 9 GDX1, and 8 GDX2 differences without a per-item table.
+The same structural rules apply to expansion archives, including crafted-result
+rarity and named boss-chest, nemesis, and Tomb of the Heretic loot chains.
+See [the parity audit](docs/AUDIT.md#full-rainbow-parity-2026-07-31) for the
+measured breakdown, the rejected inference rules, and the distinction between
+category-level compatibility rules and exact per-tag parity.
 
 gdse stages all generated files before publication, rejects unsafe archive paths, and records owned output in `.gdse-manifest`. When more than one archive supplies the same destination, the later archive replaces the earlier staged file, following the game's archive overlay order. Later runs remove only stale files named by that manifest, leaving unrelated files alone. Existing generated files are backed up during publication and restored if publication fails.
 

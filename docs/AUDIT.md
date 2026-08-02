@@ -62,6 +62,16 @@
 
 `--full-rainbow` was developed against a diff of gdse's generated `tags_items.txt` and the `tags_items.txt` distributed with the Full Rainbow mod, taken on a licensed installation of game version 1.3.0. This section records what that comparison established so the analysis does not have to be repeated.
 
+**Evidence provenance:** the numerical results below come from that recorded
+licensed-installation run, not from the repository's synthetic fixtures. A
+normal checkout contains neither Grim Dawn's proprietary archives nor Full
+Rainbow's distributed localization file, so a later source review can verify
+that the implementation follows the documented inference rules, but cannot
+independently regenerate the output. The two captured `tags_items.txt` files and
+plain-text record exports are now under `records/`, so source-level rules can be
+checked against the captured comparison; full revalidation still requires
+running the generator against the proprietary archives.
+
 ### Measurement
 
 | Build | Differing lines |
@@ -122,24 +132,155 @@ This costs about 5,200 extra record decompressions and only when the flag is set
 
 ### Measurement of the shipped rule
 
-Measured on the same installation: **148 differing lines**, down from 273 before the category existed. Still no text-level difference of any kind. The residue decomposes exactly:
+The supplied outputs contain **149 differing tags**, down from 273 before the
+Monster Infrequent category existed. Still no text-level difference of any
+kind. The original residue decomposes exactly:
 
 | Bucket | Lines | Cause |
 | --- | --- | --- |
 | `- → W` / `- → Y` | 103 | Full Rainbow's hand list has no entry; gdse colors ordinary gear |
 | `W → -`, `G → -`, `S → -` | 19 | Tags with no item record, and enemy-only gear |
-| `F → I`, `Z → B`, `L → G` | 15 | Monster Infrequents gdse still misses |
+| `F → I`, `Z → B`, `L → G` | 17 | Monster Infrequents gdse still misses |
 | `B → Z`, `G → L` | 7 | Monster Infrequents Full Rainbow does not color |
 | `A → -`, `P → -`, `F → -` | 3 | The two unique styles, and `tagItemTest` |
-| `B → Z` | 1 | `tagHeadC034B`, a tier collision |
 
-The 7 false positives are irreducible. `Gutworm's Bloody Seal`, `Razorback's Spined Mantle`, `Bernard's Slightly-Chewed Buckler`, `Leander Greene's Hand Cannon`, `Bloodreaper's Cleaver`, `Reddan Memento Ring` and `Skinner's Torch` are all genuine named-monster drops that Full Rainbow's hand-maintained list happens not to paint. Nothing in the database distinguishes them from the Infrequents it does paint.
+In that table the left side is Full Rainbow and the right side is gdse; `-`
+means no explicit color marker. Thus the large `- → W` / `- → Y` block
+does not indicate failed rarity inference. It is gdse successfully finding
+records which the mod's list does not color. The block is exactly 36
+`tagCraftRandom*` names and 67 Loyalist illusion equipment names
+(`tagDLCA01` through `tagDLCA43`, plus the populated `tagDLCB*` range). Those
+two coherent families account for all 103 lines. Suppressing them would make a
+comparison against that release smaller, but would replace the database rule
+with knowledge of omissions in one hand-maintained file.
+
+### Can exact parity be inferred without per-item fixes?
+
+No, not from the fields available in the game database. There are two useful
+levels of "closer" which should not be confused:
+
+1. A pair of **category-level compatibility rules** now suppress the
+   `tagCraftRandom*` and Loyalist illusion families. That needs no list of 103
+   individual items and removes 103 lines from the supplied comparison. The
+   rules also follow the semantic distinction visible in
+   the localization categories: generated crafting-result labels and cosmetic
+   unlock equipment are not ordinary dropped item names. The projection still
+   needs remeasurement on a licensed installation.
+2. **Exact parity** requires exceptions or an external copy of Full Rainbow's
+   tag decisions. Some localization tags have no corresponding item record;
+   seven real named-monster drops satisfy the same database rule as other MIs
+   but are not painted as MIs by Full Rainbow; and two tags for the same helm
+   need different colors despite resolving to the same inferred metadata. No
+   further traversal or classifier can recover distinctions which are absent
+   from its input.
+
+The uploaded records expose the missing discriminator: named families retain a
+descriptor after their rarity token in both the `LevelTable` and its dynamic
+children (`d02_alkamos`, `c03_sharzul`, `ghostly`), while generic tier wrappers
+end at `c01` or `d101`. Following only specialized parent/child paths recovers
+15 missing MI colors. It introduces one known tier collision,
+`tagHeadC034B`, rather than the 239 false positives caused by following every
+`records` array. Together with the two unique-style and two quest-item category
+colors, that first implementation projected **28 differing tags** on the
+supplied snapshot.
+
+The next generated output confirmed **29 differences**. The one-line delta
+from the projection is `Scythe of Tenebris`: it is a genuine specialized boss
+drop and therefore satisfies the same generic rule, but Full Rainbow leaves it
+at ordinary Epic blue. The remaining uncolored entries reveal five coherent
+missing-record families. Numeric-only fallbacks now cover wooden quality words,
+base head and shield names, monster torsos, and faction shoulders/torsos without
+touching their description tags. Those rules remove 13 more lines, leaving a
+projected **16 differences**.
+
+The following output contained **19 differences** rather than 16. The broad
+shield-family fallback colored `Riot Shield` and the second `Targe`, which Full
+Rainbow deliberately leaves plain, while `Ragged Tunic` remained uncolored
+because it has an item record with unknown classification rather than no record
+at all. The fallback now applies to unknown-classification family members too,
+and the inconsistent shield family is no longer generalized. This trades the
+two false shield colors for the still-unresolved `tagShieldA011` and correctly
+colors `Ragged Tunic`.
+
+The record export also corrects the earlier `Broken` conclusion: only the odd
+Arcane staff tags (`A001`, `A003`, `A005`, `A007`) own `Broken` enemy-gear
+records; the even tags have no records. Tracking `Broken` without treating it
+as an affixable Common rarity therefore fixes all four intended white names and
+does not color the three intervening names. Coloring the explicit localization
+test category fixes `Gazer Man`. Together these changes project to **12
+differences**.
+
+The original 7 false positives are irreducible. `Gutworm's Bloody Seal`, `Razorback's Spined Mantle`, `Bernard's Slightly-Chewed Buckler`, `Leander Greene's Hand Cannon`, `Bloodreaper's Cleaver`, `Reddan Memento Ring` and `Skinner's Torch` are all genuine named-monster drops that Full Rainbow's hand-maintained list happens not to paint. `Scythe of Tenebris` is the same kind of omission exposed by the specialized traversal. Nothing in the database distinguishes them from the Infrequents Full Rainbow does paint.
 
 The tier collision is also irreducible: `tagHeadC034` and `tagHeadC034B` are the same helm at two tiers, Full Rainbow paints them `{^Z}` and `{^B}`, and gdse reads no field that separates them.
 
-### The last 15 lines, and why the array that would fix them stays unread
+### Expansion localization files
 
-The remaining misses are superboss loot — Shar'Zul (`Furnace`, `Incinerator`, `Worldeater`), Mogdrogen (`Spaulders`, `Mantle`), Alkamos (`Soulrend`, both `Touch of` rings), Loghorrean, the Mad Queen, `Outcast's Secret`, and the Rare `Spectral`/`Manticore` weapon family. They are reached through a wrapper the resolve deliberately does not follow.
+The supplied GDX1 and GDX2 comparisons contain 38 and 18 differences,
+respectively. They expose three additional generic signals:
+
+- Twenty Rare item records are results of Magical blueprints (16 in GDX1 and
+  4 in GDX2). The formula's `forcedRandomArtifactName` points at the exact
+  created base, so Full Rainbow uses the formula classification `{^Y}` without
+  guessing from the localized name.
+- Some nemesis `LevelTable` parents do not carry a rarity token, although their
+  children do (`lt_legs_nemesisaetherialvanguard` to
+  `tdyn_legs_b101_aetherialvanguardnemesis`). Recording a specialized child is
+  sufficient evidence; requiring the parent to repeat the token missed ten
+  expansion MIs. Tomb of the Heretic tables use the same named-family structure
+  without any rarity token in their paths.
+- Kra'vall and Loghorrean items are behind specialized tables named by boss
+  chests rather than creatures. A boss-chest record may seed such a child table
+  directly without treating generic chest pools as Monster Infrequents.
+
+The three invisible GDX1 illusion equipment tags are another coherent cosmetic
+category and remain uncolored. The regenerated files confirm **9 GDX1
+differences**. GDX2 also regenerated with 9 rather than the projected 8: four
+Morgoneth pieces gained their intended MI color, but the same generic Tomb of
+the Heretic rule also colors two other genuine Morgoneth set drops that Full
+Rainbow leaves ordinary Legendary. That inconsistency has no record-level
+discriminator.
+
+The regenerated base file exposed two over-broad cuts. Applying Magical formula
+rarity to every crafted base changed 46 ordinary Rare names; Full Rainbow uses
+yellow only for the expansion's level-90 crafted bases. Likewise, accepting any
+specialized child under an unnamed parent admitted six ordinary Rare pools.
+The implementation now requires a level-90 result for the formula override and
+requires the parent itself to be specialized, recognizing descriptor-only
+`nemesis` and `tombofheretic` parents explicitly. With those corrections the
+base comparison projects from 63 observed differences to 11, while preserving
+the confirmed GDX1 result and projecting 9 for GDX2.
+
+The next supplied run showed **17 base, 25 GDX1, and 13 GDX2 differences**.
+That established two implementation details the plain DBR export could not:
+numeric `levelRequirement` is not retained by the ARZ inference reader, so the
+level gate suppressed every expansion formula override, and specialized boss
+chests admitted six base-game named drops that Full Rainbow leaves at ordinary
+rarity. The formula override now uses the stable `tagGDX*` localization
+namespace instead. Boss-chest candidates likewise apply only to `tagGDX1*`
+owners, retaining Kra'vall while excluding the six base regressions and leaving
+Loghorrean unresolved. With the already-confirmed nemesis/tomb behavior this
+projects **12 base, 9 GDX1, and 9 GDX2 differences**.
+
+The latest regenerated files confirm **12 base and 9 GDX1 differences**, exactly
+as projected, and improve GDX2 to **8 differences**. The two Morgoneth pieces
+that had been false MI colors are no longer reached after restoring the
+specialized-parent requirement, while the four intended Morgoneth pieces remain
+correctly colored through their other database relationships. The remaining
+GDX2 lines are four unrecovered Legendary special drops, two faction gun names
+Full Rainbow leaves plain, `Wilhelm's Wondrous Wargem` with no inferred owner,
+and `Badge of Perseverance`, which Full Rainbow leaves plain despite its
+Legendary record.
+
+### Specialized `LevelTable` traversal
+
+The specialized traversal recovers Shar'Zul (`Furnace`, `Incinerator`,
+`Worldeater`), Mogdrogen (`Spaulders`, `Mantle`), Alkamos (`Soulrend`, both
+`Touch of` rings), the Mad Queen, `Outcast's Secret`, two Triumvirate helm tags,
+and the Rare Spectral weapon family. `Manticore Longsword` has no loot-table
+reference in the supplied exports, while Loghorrean's shoulders are reached
+through boss-chest records rather than a creature-owned table; those two remain
+ordinary Rare colors.
 
 Alkamos' chain, read end to end from the records themselves:
 
@@ -151,25 +292,22 @@ ghost_stepsoftorment_03.dbr   lootRightHandItem2  Class,Monster
         d012_axe2h.dbr                                  Soulrend
 ```
 
-A `LevelTable` selects among whole tables by character level and lists them in a `records` **string array**. Reading that array connects all ten of the boss chains above, including the two Alkamos set rings — the `(S) ` marker and the `{^F}` Infrequent color compose correctly. It also connects every generic tier wrapper a monster can reach, because monsters name `LevelTable`s for the gear they wield alongside the ones holding their Infrequents. Measured: **377 differing lines**, 184 Epic and 55 Legendary bases reading as somebody's Infrequent. Ten lines gained, 239 lost.
-
-Two attempts to keep one and drop the other failed:
-
-- Restricting the follow to a boss's own mastertable and whatever it leads to produced **byte-identical output**. That rules out creature-named wield tables as the source, and points at mastertables that pass the reference-count test yet still yield ordinary gear.
-- The reference count itself cannot separate those, for the reason recorded above: it is only meaningful within `mastertables/`, and these are inside it on the wrong side.
-
-Separating a boss's own wrapper from a generic one needs a signal this pass does not have. `scan_loot_table` therefore reads `lootName*` and not `records`, and the comment there says why so it is not re-attempted from scratch.
+A `LevelTable` selects among whole tables by character level and lists them in a
+`records` **string array**. Reading every array connects generic tier wrappers
+as well as boss chains and produced 377 differences: 184 Epic and 55 Legendary
+bases read as somebody's Infrequent. The specialized-path rule instead records
+only named parent/child pairs and refuses to expand from a specialized table
+into a generic nested table.
 
 ### A reader defect found along the way
 
-`parse_fields` kept a string field only when its value count was 1, silently discarding every array-valued string field in the database — for every code path, flag or no flag. It was found while chasing the chain above and is fixed independently: arrays now arrive as one field per element, and `gd_record_field` still answers with the first, so single-valued readers are unaffected. No consumer reads an array today, so the fix changes no output.
+`parse_fields` kept a string field only when its value count was 1, silently discarding every array-valued string field in the database — for every code path, flag or no flag. It was found while chasing the chain above and is fixed independently: arrays now arrive as one field per element, and `gd_record_field` still answers with the first, so single-valued readers are unaffected. The specialized loot-table scanner now consumes the relevant `records` elements individually.
 
 The lesson worth keeping is about the encoding. A `.dbr` text export writes an array as one semicolon-joined string; the ARZ stores one string index per element. Code written against a text export will not fire on real data, and the first attempt at `records` parsing did exactly that and produced three rounds of unexplained byte-identical results.
 
 ## Residual risks and follow-up
 
 - Compare generated output byte-for-byte with the pre-fork Rust executable. The C readers have now been exercised against real version-3 game data (see *Full Rainbow parity*), but the two implementations have never been diffed against each other on the same installation.
-- The last 15 Monster Infrequent lines need a way to tell a boss's own `LevelTable` wrapper from a generic tier wrapper. The chain is fully understood and the code to walk it is a few lines; what is missing is the discriminator. See *The last 15 lines* before attempting it — reference counts and path structure have both been measured and both fail.
 - Exercise publication rollback with injected rename/write failures on Linux and Windows.
 - Validate non-English archives and invalid-byte behavior.
 - Confirm archive record identifiers' documented contract upstream; containment is enforced defensively regardless.
