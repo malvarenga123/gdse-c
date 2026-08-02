@@ -259,11 +259,19 @@ static void monster_infrequent_cases(void)
     if(!add_item_path_for_test(&inference,"records/items/w/sabre.dbr",
                                "tagSabre",&err))++failures;
     t=gd_inference_ensure_tag(&inference,"tagCraftedRare",&err);
-    t->kind=GD_ITEM; t->item_present=1; t->gear=1; ++t->counts[GD_RARE];
+    t->kind=GD_ITEM; t->item_present=1; t->gear=1;
+    t->level_requirement=90; ++t->counts[GD_RARE];
     if(!add_item_path_for_test(&inference,"records/items/w/craftedrare.dbr",
                                "tagCraftedRare",&err))++failures;
     if(!add_craft_path_for_test(&inference,
           "records/items/w/craftedrare.dbr",GD_MAGICAL,&err))++failures;
+    t=gd_inference_ensure_tag(&inference,"tagOrdinaryCraftedRare",&err);
+    t->kind=GD_ITEM; t->item_present=1; t->gear=1;
+    t->level_requirement=50; ++t->counts[GD_RARE];
+    if(!add_item_path_for_test(&inference,"records/items/w/ordinarycraft.dbr",
+                               "tagOrdinaryCraftedRare",&err))++failures;
+    if(!add_craft_path_for_test(&inference,
+          "records/items/w/ordinarycraft.dbr",GD_MAGICAL,&err))++failures;
     /* Common gear sitting in a monster's own loot slot is what it wields, not
        an Infrequent. */
     t=gd_inference_ensure_tag(&inference,"tagWieldedClub",&err);
@@ -430,6 +438,7 @@ static void monster_infrequent_cases(void)
     if(gd_tag_color(&inference,"tagSabre",1)!='w')++failures;
     if(gd_tag_color(&inference,"tagCraftedRare",1)!='y')++failures;
     if(gd_tag_color(&inference,"tagCraftedRare",0)!='g')++failures;
+    if(gd_tag_color(&inference,"tagOrdinaryCraftedRare",1)!='g')++failures;
     /* In a monster's own table, but Common: still an ordinary base. */
     if(gd_tag_color(&inference,"tagWieldedClub",1)!='w')++failures;
     /* Two table hops from the creature's own table: still an Infrequent. */

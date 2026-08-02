@@ -18,7 +18,7 @@ unless the repository documents a different versioning policy.
   category is derived from the game database; none uses a hand-maintained list.
   The original database-only rule differed on 149 of roughly 4,500 lines
   against the supplied game-version-1.3.0 snapshot. Generic category and
-  specialized loot-chain rules reduce the latest snapshot to a projected 12
+  specialized loot-chain rules reduce the latest snapshot to a projected 11
   color-only differences without a per-item table.
 - Added ISO C89 builds with POSIX `make`, including vendored LZ4 and utf8proc
   dependencies so builds do not need to download third-party packages.
@@ -65,6 +65,9 @@ unless the repository documents a different versioning policy.
 - Fixed crafted Rare bases taking Rare green instead of the Magical color of
   the blueprint result, and named boss-chest and descriptor-less nemesis/tomb
   loot chains being skipped.
+- Restricted the crafted-result override to level-90 endgame formulas and
+  descriptor-less loot parents to named nemesis/tomb families, avoiding Common
+  game crafted-base and generic-pool regressions.
 - Fixed invisible GDX1 illusion equipment receiving Common white.
 - Fixed item, affix, style, and quality tag inference so shared tags, unknown
   item classifications, rarity ties, faction items, and affixable name parts

@@ -33,6 +33,7 @@ typedef struct gd_tag {
     int name_part;
     int monster_infrequent;
     int broken_item;
+    unsigned long level_requirement;
     gd_rarity full_rainbow_rarity;
     struct gd_tag *next;
     struct gd_tag *hash_next;

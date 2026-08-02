@@ -360,6 +360,7 @@ static int is_specialized_loot_path(const char *path)
     const char *p;
     name = name == NULL ? path : name + 1;
     if (strstr(name, "_ghostly.dbr") != NULL) return 1;
+    if (strstr(name, "nemesis") != NULL) return 1;
     if (strstr(name, "_tombofheretic_") != NULL) return 1;
     for (p = name; *p != '\0'; ++p) {
         const char *q;
@@ -410,6 +411,7 @@ static int scan_loot_table(gd_inference *inference, const gd_record *record,
     for (field = record->fields; field != NULL; field = field->next) {
         if (!starts(field->key, "lootName") &&
             !(strcmp(field->key, "records") == 0 &&
+              is_specialized_loot_path(record->id) &&
               is_specialized_loot_path(field->value))) continue;
         if (*field->value == '\0') continue;
         if (!add_loot_entry(inference, record->id, field->value, err)) return 0;
@@ -598,6 +600,9 @@ int gd_infer_database(gd_inference *inference, gd_arz *db, gd_error *err)
             part = gd_record_field(&record, "itemQualityTag");
             if (!gd_inference_add_part(inference, part, tag_name, err)) { gd_record_free(&record); return 0; }
             rarity_text = gd_record_field(&record, "itemClassification");
+            { const char *level = gd_record_field(&record, "levelRequirement");
+              unsigned long parsed = level == NULL ? 0 : strtoul(level, NULL, 10);
+              if (parsed > tag->level_requirement) tag->level_requirement = parsed; }
             rank = rarity(rarity_text);
             if (rank != GD_UNKNOWN) {
                 tag->kind = GD_ITEM;
@@ -642,7 +647,8 @@ void gd_inference_finish(gd_inference *inference, gd_error *err)
         gd_tag *owner;
         if (item == NULL) continue;
         owner = find_tag(inference, item->tag);
-        if (owner != NULL) owner->full_rainbow_rarity = craft->rarity;
+        if (owner != NULL && owner->level_requirement >= 90)
+            owner->full_rainbow_rarity = craft->rarity;
     }
     /* mastertables/ is the shared pooling layer, and a table a creature names
        outside it belongs to that creature. The reference count is not a general

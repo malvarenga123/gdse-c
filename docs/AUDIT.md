@@ -234,10 +234,22 @@ respectively. They expose three additional generic signals:
   directly without treating generic chest pools as Monster Infrequents.
 
 The three invisible GDX1 illusion equipment tags are another coherent cosmetic
-category and remain uncolored. These rules project the expansion comparisons
-from 38 to 9 differences for GDX1 and from 18 to 8 for GDX2, without per-item
-decisions. The residue consists of hand-list anomalies and Legendary items with
-no recoverable monster-table relationship in the supplied record graph.
+category and remain uncolored. The regenerated files confirm **9 GDX1
+differences**. GDX2 also regenerated with 9 rather than the projected 8: four
+Morgoneth pieces gained their intended MI color, but the same generic Tomb of
+the Heretic rule also colors two other genuine Morgoneth set drops that Full
+Rainbow leaves ordinary Legendary. That inconsistency has no record-level
+discriminator.
+
+The regenerated base file exposed two over-broad cuts. Applying Magical formula
+rarity to every crafted base changed 46 ordinary Rare names; Full Rainbow uses
+yellow only for the expansion's level-90 crafted bases. Likewise, accepting any
+specialized child under an unnamed parent admitted six ordinary Rare pools.
+The implementation now requires a level-90 result for the formula override and
+requires the parent itself to be specialized, recognizing descriptor-only
+`nemesis` and `tombofheretic` parents explicitly. With those corrections the
+base comparison projects from 63 observed differences to 11, while preserving
+the confirmed GDX1 result and projecting 9 for GDX2.
 
 ### Specialized `LevelTable` traversal
 
