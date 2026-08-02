@@ -49,8 +49,8 @@ database, while Full Rainbow's file is a hand-maintained tag list. On game
 version 1.3.0 the original inference left 149 color-only differences among
 roughly 4,500 lines. Generic exclusions for random-crafting labels and Loyalist
 illusion equipment account for 103 of those. Specialized loot-chain traversal
-and localization-category rules reduce the latest supplied comparison to a
-projected 12 differences without a per-item table.
+and localization-category rules reduce the latest supplied comparisons to 12
+base, 9 GDX1, and 8 GDX2 differences without a per-item table.
 The same structural rules apply to expansion archives, including crafted-result
 rarity and named boss-chest, nemesis, and Tomb of the Heretic loot chains.
 See [the parity audit](docs/AUDIT.md#full-rainbow-parity-2026-07-31) for the

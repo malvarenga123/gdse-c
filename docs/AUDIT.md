@@ -262,6 +262,16 @@ owners, retaining Kra'vall while excluding the six base regressions and leaving
 Loghorrean unresolved. With the already-confirmed nemesis/tomb behavior this
 projects **12 base, 9 GDX1, and 9 GDX2 differences**.
 
+The latest regenerated files confirm **12 base and 9 GDX1 differences**, exactly
+as projected, and improve GDX2 to **8 differences**. The two Morgoneth pieces
+that had been false MI colors are no longer reached after restoring the
+specialized-parent requirement, while the four intended Morgoneth pieces remain
+correctly colored through their other database relationships. The remaining
+GDX2 lines are four unrecovered Legendary special drops, two faction gun names
+Full Rainbow leaves plain, `Wilhelm's Wondrous Wargem` with no inferred owner,
+and `Badge of Perseverance`, which Full Rainbow leaves plain despite its
+Legendary record.
+
 ### Specialized `LevelTable` traversal
 
 The specialized traversal recovers Shar'Zul (`Furnace`, `Incinerator`,

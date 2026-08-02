@@ -18,8 +18,8 @@ unless the repository documents a different versioning policy.
   category is derived from the game database; none uses a hand-maintained list.
   The original database-only rule differed on 149 of roughly 4,500 lines
   against the supplied game-version-1.3.0 snapshot. Generic category and
-  specialized loot-chain rules reduce the latest snapshot to a projected 12
-  color-only differences without a per-item table.
+  specialized loot-chain rules reduce the latest snapshots to 12 base, 9 GDX1,
+  and 8 GDX2 color-only differences without a per-item table.
 - Added ISO C89 builds with POSIX `make`, including vendored LZ4 and utf8proc
   dependencies so builds do not need to download third-party packages.
 - Added native MinGW32 and MSYS2 build support for Windows.
