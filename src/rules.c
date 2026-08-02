@@ -431,8 +431,7 @@ static int scan_loot_chest(gd_inference *inference, const gd_record *record,
             !is_specialized_loot_path(field->value)) continue;
         table = ensure_loot_table(inference, field->value, err);
         if (table == NULL) return 0;
-        table->monster_drop = 1;
-        table->expandable = 1;
+        table->expansion_chest_drop = 1;
     }
     return 1;
 }
@@ -600,9 +599,6 @@ int gd_infer_database(gd_inference *inference, gd_arz *db, gd_error *err)
             part = gd_record_field(&record, "itemQualityTag");
             if (!gd_inference_add_part(inference, part, tag_name, err)) { gd_record_free(&record); return 0; }
             rarity_text = gd_record_field(&record, "itemClassification");
-            { const char *level = gd_record_field(&record, "levelRequirement");
-              unsigned long parsed = level == NULL ? 0 : strtoul(level, NULL, 10);
-              if (parsed > tag->level_requirement) tag->level_requirement = parsed; }
             rank = rarity(rarity_text);
             if (rank != GD_UNKNOWN) {
                 tag->kind = GD_ITEM;
@@ -647,7 +643,7 @@ void gd_inference_finish(gd_inference *inference, gd_error *err)
         gd_tag *owner;
         if (item == NULL) continue;
         owner = find_tag(inference, item->tag);
-        if (owner != NULL && owner->level_requirement >= 90)
+        if (owner != NULL && starts(owner->name, "tagGDX"))
             owner->full_rainbow_rarity = craft->rarity;
     }
     /* mastertables/ is the shared pooling layer, and a table a creature names
@@ -717,13 +713,16 @@ void gd_inference_finish(gd_inference *inference, gd_error *err)
        so this resolves once both passes are complete. */
     for (table = inference->loot_tables; table != NULL; table = table->next) {
         gd_loot_entry *entry;
-        if (!table->monster_drop) continue;
+        if (!table->monster_drop && !table->expansion_chest_drop) continue;
         for (entry = table->entries; entry != NULL; entry = entry->next) {
             const gd_item_path *item =
                 find_item_path(inference, entry->item_path);
             gd_tag *owner;
             if (item == NULL) continue;
             owner = find_tag(inference, item->tag);
+            if (table->expansion_chest_drop && !table->monster_drop &&
+                owner != NULL &&
+                !starts(owner->name, "tagGDX1")) continue;
             /* Only Rare and above. A monster's loot slots also hold the
                ordinary Common gear it wields, which is not an Infrequent and
                which Full Rainbow leaves at its base color. */

@@ -251,6 +251,17 @@ requires the parent itself to be specialized, recognizing descriptor-only
 base comparison projects from 63 observed differences to 11, while preserving
 the confirmed GDX1 result and projecting 9 for GDX2.
 
+The next supplied run showed **17 base, 25 GDX1, and 13 GDX2 differences**.
+That established two implementation details the plain DBR export could not:
+numeric `levelRequirement` is not retained by the ARZ inference reader, so the
+level gate suppressed every expansion formula override, and specialized boss
+chests admitted six base-game named drops that Full Rainbow leaves at ordinary
+rarity. The formula override now uses the stable `tagGDX*` localization
+namespace instead. Boss-chest candidates likewise apply only to `tagGDX1*`
+owners, retaining Kra'vall while excluding the six base regressions and leaving
+Loghorrean unresolved. With the already-confirmed nemesis/tomb behavior this
+projects **12 base, 9 GDX1, and 9 GDX2 differences**.
+
 ### Specialized `LevelTable` traversal
 
 The specialized traversal recovers Shar'Zul (`Furnace`, `Incinerator`,
