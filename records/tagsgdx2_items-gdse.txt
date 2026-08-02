@@ -439,8 +439,8 @@ tagGDX2TorsoF212={^G}Solael Vile Cuirass
 
 
 #ArmorHands
-tagGDX2HandsB201={^Y}Plagueguard Grips
-tagGDX2HandsB202={^Y}Emberguard Gauntlets
+tagGDX2HandsB201={^G}Plagueguard Grips
+tagGDX2HandsB202={^G}Emberguard Gauntlets
 
 tagGDX2HandsC201={^B}Turin's Grips
 tagGDX2HandsC201_Desc="Gauntlets of Turin, Shieldbreaker of Ikon, who perished in the service of Empyrion."
@@ -461,8 +461,8 @@ tagGDX2HandsD205=(S) {^F}Morgoneth's Grip
 
 
 #ArmorLegs
-tagGDX2LegsB201={^Y}Stormguard Leggings
-tagGDX2LegsB202={^Y}Rimeguard Chausses
+tagGDX2LegsB201={^G}Stormguard Leggings
+tagGDX2LegsB202={^G}Rimeguard Chausses
 
 tagGDX2LegsC201={^B}Vilescorn Legplates
 tagGDX2LegsC202={^B}Astral Legwraps

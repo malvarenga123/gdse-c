@@ -45,7 +45,7 @@ tagGDX1WeaponBluntF104={^I}Howl of the Wendigo
 
 tagGDX1WeaponAxeB101={^L}Servitor's Slicer
 tagGDX1WeaponAxeB102={^L}Servitor's Corruptor
-tagGDX1WeaponAxeB103={^Y}Bloodspill Cleaver
+tagGDX1WeaponAxeB103={^G}Bloodspill Cleaver
 
 tagGDX1WeaponAxeC101={^B}Halvor's Skinner
 
@@ -67,7 +67,7 @@ tagGDX1WeaponGun1hB101={^L}Ugdenbog Howler
 tagGDX1WeaponGun1hB101Desc="Infused with the spirit of the Wendigo."
 tagGDX1WeaponGun1hB102={^L}Ugdenbog Venom Launcher
 tagGDX1WeaponGun1hB102Desc="Each bullet is dipped into a unique concoction crafted from the various beasts inhabiting Ugdenbog."
-tagGDX1WeaponGun1hB103={^Y}Stormsurge Pistol
+tagGDX1WeaponGun1hB103={^G}Stormsurge Pistol
 
 tagWeaponGun1hC013B={^B}Mediator
 tagGDX1WeaponGun1hC101={^B}The Dissenter
@@ -109,7 +109,7 @@ tagGDX1WeaponGun2hB101Desc="The stone core of a swamp golem has proven to be sur
 tagGDX1WeaponGun2hB102={^L}Ugdenbog Bilelauncher
 tagGDX1WeaponGun2hB103={^L}Ugdenbog Boltthrower
 tagGDX1WeaponGun2hB104={^L}Ugdenbog Arcaneweaver
-tagGDX1WeaponGun2hB105={^Y}Flamewarder Rifle
+tagGDX1WeaponGun2hB105={^G}Flamewarder Rifle
 
 tagGDX1WeaponGun2hC101={^B}The Interrogator
 tagGDX1WeaponGun2hC101B={^B}Interrogator
@@ -139,7 +139,7 @@ tagGDX1WeaponGun2hF104_Desc="Every foe a mere delay to the desolation that follo
 
 tagGDX1WeaponMelee2hB101={^L}Fleshwarped Core
 tagGDX1WeaponMelee2hB102={^L}Fleshwarped Shard
-tagGDX1WeaponMelee2hB103={^Y}Gutcrush Warmaul
+tagGDX1WeaponMelee2hB103={^G}Gutcrush Warmaul
 
 tagGDX1WeaponMelee2hC101={^B}Soulsplitter
 tagGDX1WeaponMelee2hC101_Desc="The blade of this scythe is said to cleave more than just flesh."
@@ -172,8 +172,8 @@ tagGDX1WeaponCaster1hB102={^L}Ugdenbog Chillstrife
 tagGDX1WeaponCaster1hB103={^L}Ugdenbog Stormstrife
 tagGDX1WeaponCaster1hB104={^L}Ascendant Conduit
 tagGDX1WeaponCaster1hB105={^L}Ascendant Source
-tagGDX1WeaponCaster1hB106={^Y}Rime-Rotten Wand
-tagGDX1WeaponCaster1hB107={^Y}Deathborne Scepter
+tagGDX1WeaponCaster1hB106={^G}Rime-Rotten Wand
+tagGDX1WeaponCaster1hB107={^G}Deathborne Scepter
 tagGDX1WeaponCaster1hB108={^L}Heart of Theodin Marcell
 tagGDX1WeaponCaster1hB108_Desc="A fragment of its master's power still beats within."
 
@@ -226,7 +226,7 @@ tagGDX1WeaponCaster1hF111={^I}Claw of Hagaraz
 tagGDX1ShieldB101={^L}Colossal Fortress
 tagGDX1ShieldB101Desc="The shield's proportions require equally colossal strength."
 tagGDX1ShieldB102={^L}Colossal Bulwark
-tagGDX1ShieldB103={^Y}Stonewall Defender
+tagGDX1ShieldB103={^G}Stonewall Defender
 
 tagGDX1ShieldC101={^B}Dreadguard
 tagGDX1ShieldC102={^B}Legionnaire's Rebuke
@@ -269,8 +269,8 @@ tagGDX1FocusB105={^L}Fleshwarped Tome
 tagGDX1FocusB105Desc="The tome writhes in your hands."
 tagGDX1FocusB106={^L}Fleshwarped Codex
 tagGDX1FocusB107={^L}Fleshwarped Archive
-tagGDX1FocusB108={^Y}Spellshock Tome
-tagGDX1FocusB109={^Y}Smoldering Tome
+tagGDX1FocusB108={^G}Spellshock Tome
+tagGDX1FocusB109={^G}Smoldering Tome
 tagGDX1FocusB110={^L}Leafmane Horn
 tagGDX1FocusB111={^L}Leafmane Trophy
 
@@ -582,8 +582,8 @@ tagGDX1LegsD110_Desc="The beast which gave up its fur for the creation of this a
 
 
 #ArmorFeet
-tagGDX1FeetB101={^Y}Intrepid Warboots
-tagGDX1FeetB102={^Y}Stoneplate Greaves
+tagGDX1FeetB101={^G}Intrepid Warboots
+tagGDX1FeetB102={^G}Stoneplate Greaves
 
 tagGDX1FeetC101={^B}Grim Harvest Boots
 tagGDX1FeetC102={^B}Deadwalker Footpads
@@ -611,9 +611,9 @@ tagGDX1WaistB101={^L}Ugdenbog Girdle
 tagGDX1WaistB102={^L}Ugdenbog Waistguard
 tagGDX1WaistB103={^L}Lunal'Valgoth's Girdle
 tagGDX1WaistB104={^L}Lunal'Valgoth's Waistguard
-tagGDX1WaistB105={^Y}Trollheart Waistguard
-tagGDX1WaistB106={^Y}Puppetmaster Links
-tagGDX1WaistB107={^Y}Stoneplate Waistguard
+tagGDX1WaistB105={^G}Trollheart Waistguard
+tagGDX1WaistB106={^G}Puppetmaster Links
+tagGDX1WaistB107={^G}Stoneplate Waistguard
 
 tagGDX1WaistC101={^B}Spitewraith Girdle
 tagGDX1WaistC102={^B}Soulweave Girdle
@@ -793,8 +793,8 @@ tagGDX1MedalB105={^L}Wendigo Eye
 tagGDX1MedalB105_Desc="The bloodshot eye still moves when blood is nearby."
 tagGDX1MedalB106={^L}Wendigo Gaze
 tagGDX1MedalB106_Desc="The bloodshot eye bewilders any lesser creature that gazes upon it."
-tagGDX1MedalB107={^Y}Nimble Crest
-tagGDX1MedalB108={^Y}Watcher Crest
+tagGDX1MedalB107={^G}Nimble Crest
+tagGDX1MedalB108={^G}Watcher Crest
 tagGDX1MedalB109={^L}Slathsarr's Crest
 tagGDX1MedalB109_Desc="The fangs drip with aetherwarped venom."
 tagGDX1MedalB110={^L}Mark of Plagius
