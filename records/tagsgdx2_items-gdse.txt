@@ -286,7 +286,7 @@ tagGDX2HeadD202={^I}Crown of the Revenant King
 tagGDX2HeadD202_Desc="Death bows before its king."
 tagGDX2HeadD203={^I}Soulare's Helm
 tagGDX2HeadD203_Desc="The sun is just so grossly incandescent."
-tagGDX2HeadD204={^F}Horns of Korvaak
+tagGDX2HeadD204={^I}Horns of Korvaak
 tagGDX2HeadD204_Desc="The horns of the Celestial Lord of the Eldritch Realm."
 tagGDX2HeadD205={^F}Okaloth's Visage
 tagGDX2HeadD206=(S) {^I}Shattered Realm Mask
@@ -359,7 +359,7 @@ tagGDX2ShoulderD215=(S) {^I}Pyran's Mantle
 tagGDX2ShoulderD216=(S) {^I}Targo's Shoulderguard
 tagGDX2ShoulderD217=(S) {^I}Voidsoul Mantle
 tagGDX2ShoulderD218=(S) {^I}Rotgheist Shoulderguard
-tagGDX2ShoulderD219=(S) {^F}Morgoneth's Dark Mantle
+tagGDX2ShoulderD219=(S) {^I}Morgoneth's Dark Mantle
 tagGDX2ShoulderD220={^I}Shattered Realm Ceremonial Mantle
 tagGDX2ShoulderD221=(S) {^I}Veilkeeper's Mantle
 tagGDX2ShoulderD222=(S) {^I}Goredrinker's Mantle
@@ -417,7 +417,7 @@ tagGDX2TorsoD215=(S) {^I}Pyran's Vestments
 tagGDX2TorsoD216=(S) {^I}Targo's Chestguard
 tagGDX2TorsoD217=(S) {^I}Voidsoul Armor
 tagGDX2TorsoD218=(S) {^I}Rotgheist Chestguard
-tagGDX2TorsoD219=(S) {^F}Morgoneth's Black Heart
+tagGDX2TorsoD219=(S) {^I}Morgoneth's Black Heart
 tagGDX2TorsoD220={^I}Shattered Realm Ceremonial Armor
 tagGDX2TorsoD221=(S) {^I}Veilkeeper's Armor
 tagGDX2TorsoD222=(S) {^I}Goredrinker's Armor
@@ -439,8 +439,8 @@ tagGDX2TorsoF212={^G}Solael Vile Cuirass
 
 
 #ArmorHands
-tagGDX2HandsB201={^G}Plagueguard Grips
-tagGDX2HandsB202={^G}Emberguard Gauntlets
+tagGDX2HandsB201={^Y}Plagueguard Grips
+tagGDX2HandsB202={^Y}Emberguard Gauntlets
 
 tagGDX2HandsC201={^B}Turin's Grips
 tagGDX2HandsC201_Desc="Gauntlets of Turin, Shieldbreaker of Ikon, who perished in the service of Empyrion."
@@ -461,8 +461,8 @@ tagGDX2HandsD205=(S) {^F}Morgoneth's Grip
 
 
 #ArmorLegs
-tagGDX2LegsB201={^G}Stormguard Leggings
-tagGDX2LegsB202={^G}Rimeguard Chausses
+tagGDX2LegsB201={^Y}Stormguard Leggings
+tagGDX2LegsB202={^Y}Rimeguard Chausses
 
 tagGDX2LegsC201={^B}Vilescorn Legplates
 tagGDX2LegsC202={^B}Astral Legwraps

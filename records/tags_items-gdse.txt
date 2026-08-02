@@ -173,7 +173,7 @@ tagWeaponAxeB002={^L}Spectral Battle Axe
 tagWeaponAxeB003={^L}Pit Master's Axe
 tagWeaponAxeB004={^W}Bonecleaver
 tagWeaponAxeB005={^L}Bonescythe
-tagWeaponAxeB006={^L}Olman's Axe
+tagWeaponAxeB006={^G}Olman's Axe
 tagWeaponAxeB007={^L}Aetherwarped Cleaver
 tagWeaponAxeB008={^L}Aetherscorched Cleaver
 
@@ -228,7 +228,7 @@ tagWeaponGun1hB002={^G}Hand Mortar
 tagWeaponGun1hB003={^G}Shrapnel Pistol
 tagWeaponGun1hB004={^W}Bloodsworn Pistol
 tagWeaponGun1hB005={^L}Bloodsworn Repeater
-tagWeaponGun1hB006={^L}Francis' Gun
+tagWeaponGun1hB006={^G}Francis' Gun
 
 tagWeaponGun1hC001={^Z}Leander Greene's Hand Cannon
 tagWeaponGun1hC001Desc="Taken from the cold dead hands of the Blackwater bandit."
@@ -339,7 +339,7 @@ tagWeaponCrossbow2hA004={^W}Scorpion
 
 tagWeaponCrossbow2hB001={^W}Spectral Crossbow
 tagWeaponCrossbow2hB002={^L}Spectral Arbalest
-tagWeaponCrossbow2hB003={^L}Ghavlin's Crossbow
+tagWeaponCrossbow2hB003={^G}Ghavlin's Crossbow
 
 tagWeaponCrossbow2hC001={^B}Boltspitter
 tagWeaponCrossbow2hC001Desc="A prototype weapon. Unfortunately, its inventor was slain before it could be taken to mass production."
@@ -398,7 +398,7 @@ tagWeaponMelee2hB009={^L}Spectral Warmaul
 tagWeaponMelee2hB010={^L}Barthollem's Warmaul
 tagWeaponMelee2hB011={^W}Obsidian Headsplitter
 tagWeaponMelee2hB012={^L}Obsidian War Cleaver
-tagWeaponMelee2hB013={^L}Hevill's Greatsword
+tagWeaponMelee2hB013={^G}Hevill's Greatsword
 tagWeaponMelee2hB014={^L}Voldrak's Crusher
 tagWeaponMelee2hB015={^L}Balegor's Crusher
 tagWeaponMelee2hB016={^L}Lucius' Blade-Arm
@@ -494,7 +494,7 @@ tagWeaponCaster1hB011={^L}Rift Scourge Slicer
 tagWeaponCaster1hB012={^W}Bloodsworn Wand
 tagWeaponCaster1hB013={^L}Bloodsworn Scepter
 tagWeaponCaster1hB014={^L}Loxmere's Frostblade
-tagWeaponCaster1hB015={^L}Slithtongue
+tagWeaponCaster1hB015={^G}Slithtongue
 tagWeaponCaster1hB016={^L}Blaze Herald
 tagWeaponCaster1hB017={^L}Storm Herald
 tagWeaponCaster1hB018={^L}Night Herald
@@ -719,7 +719,7 @@ tagFocusB021={^L}Groble Death Effigy
 tagFocusB022={^W}Gazer Eye
 tagFocusB023={^L}Overseer Eye
 tagFocusB023_Desc="The eye still twitches in your hands."
-tagFocusB024={^L}Karvor's Conjuring Bone
+tagFocusB024={^G}Karvor's Conjuring Bone
 tagFocusB025={^L}Kyzogg's Skull
 tagFocusB026={^L}Ragrathar's Horn
 
@@ -1095,7 +1095,7 @@ tagShoulderB022={^L}Zantarin's Mantle
 tagShoulderB023={^L}Zantarin's Shoulderguard
 tagShoulderB024={^L}Fabius' Shoulderguard
 tagShoulderB025={^L}Fabius' Pauldron
-tagShoulderB026={^L}Loghorrean's Corruption
+tagShoulderB026={^G}Loghorrean's Corruption
 tagShoulderB026_Desc="Still writhing with void corruption."
 
 tagShoulderC001={^Z}Razorback's Spined Mantle
